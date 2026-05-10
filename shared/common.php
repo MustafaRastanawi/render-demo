@@ -1,8 +1,12 @@
 <?php
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_NOTICE & ~E_WARNING);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
 require_once("connect.php");
 include_once("../dataSanitizer/dataSanitizer.inc.php");
 
-if (get_magic_quotes_gpc()) {
+if (function_exists('get_magic_quotes_gpc') && get_magic_quotes_gpc()) {
+
     function stripslashes_gpc(&$value)
     {
         $value = stripslashes($value);

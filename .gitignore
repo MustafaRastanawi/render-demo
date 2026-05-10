@@ -7,3 +7,35 @@
 /config_local.php
 /.composer
 /node_modules/
+# Local Docker / generated / backup files
+composer.phar
+*.bak
+*.bak2
+docker-compose.yml.bak
+
+# Local logs
+logs/*
+!logs/.keep
+
+# Local generated contest files
+contestInterface/contests/*
+!contestInterface/contests/.keep
+
+# Local Docker files
+Dockerfile
+docker-compose.yml
+docker-compose.yml.bak
+
+# Local artifacts/backups
+composer.phar
+*.bak
+*.bak2
+
+# Local generated files
+logs/*
+!logs/.keep
+contestInterface/contests/*
+!contestInterface/contests/.keep
+
+# Local copied folders
+teacherInterface/_common

@@ -1022,12 +1022,12 @@ ALTER TABLE `group` CHANGE `maxCategory` `maxCategory` VARCHAR(30) CHARACTER SET
 ALTER TABLE `group` CHANGE `language` `language` VARCHAR(30) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL DEFAULT 'fr';
 
 INSERT INTO `group` (`ID`, `schoolID`, `grade`, `gradeDetail`, `userID`, `name`, `nbStudents`, `nbTeamsEffective`, `nbStudentsEffective`, `contestID`, `minCategory`, `maxCategory`, `language`, `parentGroupID`, `code`, `password`, `expectedStartTime`, `startTime`, `noticePrinted`, `isPublic`, `isGenerated`, `bRecovered`, `participationType`, `iVersion`) VALUES
-(796142003655934888, 1358, 12, '', 1201, 'Castor 2015 : tous les niveaux', 100000, 8522, 8523, 56, '', '', '', NULL, 'yft7zkqt', 'zfvaxswk', '2015-12-10 22:00:00', '2018-09-27 13:52:33', 0, 1, 0, 0, 'Unofficial', 261357)
+(796142003655934888, 1358, 12, '', 1201, 'Castor 2015 : tous les niveaux', 100000, 8522, 8523, 56, '', '', '', NULL, 'yft7zkqt', 'zfvaxswk', '2015-12-10 22:00:00', '2018-09-27 13:52:33', 0, 1, 0, 0, 'Unofficial', 261357);
 
 
 INSERT INTO `algorea_registration` (`ID`, `firstName`, `lastName`, `genre`, `email`, `zipCode`, `grade`, `studentID`, `category`, `validatedCategory`, `schoolID`, `userID`, `code`, `contestantID`, `franceioiID`) VALUES
 (1, 'Mat', 'Mat', 2, '', '', 0, '', '', '', 1, 1, 'c42', NULL, NULL);
 
-UPDATE `group` SET isPublic = 0, startTime = '2020-01-01 00:00' WHERE ID = 796142003655934888
+UPDATE `group` SET isPublic = 0, startTime = '2020-01-01 00:00' WHERE ID = 796142003655934888;
 
 COMMIT;

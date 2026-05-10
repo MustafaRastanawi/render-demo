@@ -488,8 +488,7 @@ CREATE TABLE IF NOT EXISTS `school_year` (
   `nbOfficialContestants` int(11) NOT NULL,
   PRIMARY KEY (`ID`),
   KEY `schoolID` (`schoolID`,`year`),
-  KEY `nbOfficialContestants` (`nbOfficialContestants`),
-  KEY `awarded` (`awarded`)
+  KEY `nbOfficialContestants` (`nbOfficialContestants`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=4 ;
 
 -- --------------------------------------------------------
