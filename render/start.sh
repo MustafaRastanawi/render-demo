@@ -14,18 +14,26 @@ fi
 mysqld_safe --datadir=/var/lib/mysql --bind-address=127.0.0.1 &
 
 echo "Waiting for MariaDB..."
-until mysqladmin ping -h127.0.0.1 --silent; do
+until mysqladmin ping --silent; do
   sleep 2
 done
 
 echo "Preparing database..."
-mysql -uroot -h127.0.0.1 <<SQL
+
+# Use socket auth for root. Do NOT use -h127.0.0.1 for root on Debian/MariaDB.
+mysql -uroot <<SQL
 CREATE DATABASE IF NOT EXISTS beaver_contest CHARACTER SET utf8 COLLATE utf8_general_ci;
+
 CREATE USER IF NOT EXISTS 'bebras'@'localhost' IDENTIFIED BY 'bebras';
+CREATE USER IF NOT EXISTS 'bebras'@'127.0.0.1' IDENTIFIED BY 'bebras';
+
 GRANT ALL PRIVILEGES ON beaver_contest.* TO 'bebras'@'localhost';
+GRANT ALL PRIVILEGES ON beaver_contest.* TO 'bebras'@'127.0.0.1';
+
 FLUSH PRIVILEGES;
 SQL
 
+echo "Checking database tables..."
 TABLE_COUNT=$(mysql -ubebras -pbebras -h127.0.0.1 beaver_contest -N -e "SHOW TABLES;" | wc -l)
 
 if [ "$TABLE_COUNT" -eq "0" ]; then
@@ -55,8 +63,8 @@ fi
 echo "Configuring Apache for Render PORT..."
 PORT="${PORT:-10000}"
 
-sed -i "s/Listen 80/Listen ${PORT}/" /etc/apache2/ports.conf
-sed -i "s/<VirtualHost \*:80>/<VirtualHost *:${PORT}>/" /etc/apache2/sites-available/000-default.conf
+sed -i "s/^Listen .*/Listen ${PORT}/" /etc/apache2/ports.conf
+sed -i "s/<VirtualHost \*:.*/<VirtualHost *:${PORT}>/" /etc/apache2/sites-available/000-default.conf
 
-echo "Starting Apache..."
+echo "Starting Apache on port ${PORT}..."
 apache2-foreground
