@@ -1,4 +1,4 @@
-/vendor/
+vendor/
 /contestInterface/bower_components/
 /contestInterface/contests/
 /teacherInterface/bower_components/

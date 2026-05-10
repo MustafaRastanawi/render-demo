@@ -18,6 +18,14 @@ WORKDIR /var/www/html
 
 COPY . /var/www/html
 
+RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
+    && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
+    && php -r "unlink('composer-setup.php');"
+
+RUN if [ -f /var/www/html/composer.json ]; then \
+      cd /var/www/html && composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader || composer install --prefer-dist --no-interaction; \
+    fi
+
 RUN npm install -g bower
 
 RUN if [ -f /var/www/html/contestInterface/bower.json ]; then \
