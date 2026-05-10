@@ -4,6 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
     git \
+    npm \
     unzip \
     libzip-dev \
     default-mysql-client \
@@ -16,6 +17,15 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /var/www/html
 
 COPY . /var/www/html
+
+RUN npm install -g bower
+
+RUN if [ -f /var/www/html/contestInterface/bower.json ]; then \
+      cd /var/www/html/contestInterface && bower install --allow-root; \
+    fi && \
+    if [ -f /var/www/html/teacherInterface/bower.json ]; then \
+      cd /var/www/html/teacherInterface && bower install --allow-root; \
+    fi
 
 RUN mkdir -p /var/www/html/logs \
     /var/www/html/contestInterface/contests \
