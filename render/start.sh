@@ -60,6 +60,201 @@ if [ "$TABLE_COUNT" -eq "0" ]; then
     mysql -ubebras -pbebras -h127.0.0.1 beaver_contest || true
 fi
 
+echo "Ensuring demo admin users exist..."
+mysql -ubebras -pbebras -h127.0.0.1 beaver_contest <<'SQL'
+SET @demo_email = 'demo.teacher@example.com';
+SET @demo_password = 'Demo123456';
+SET @demo_salt = MD5(CONCAT('render-demo-', @demo_email));
+SET @demo_password_md5 = MD5(CONCAT(@demo_password, @demo_salt));
+
+UPDATE `user`
+SET `gender` = 'M',
+    `firstName` = 'Demo',
+    `lastName` = 'Teacher',
+    `isOwnOfficialEmail` = 1,
+    `officialEmail` = @demo_email,
+    `officialEmailValidated` = 1,
+    `alternativeEmail` = @demo_email,
+    `alternativeEmailValidated` = 1,
+    `salt` = @demo_salt,
+    `passwordMd5` = @demo_password_md5,
+    `recoverCode` = '',
+    `validated` = 1,
+    `allowMultipleSchools` = 1,
+    `isAdmin` = 1,
+    `comment` = '',
+    `saniValid` = 1,
+    `orig_firstName` = 'Demo',
+    `orig_lastName` = 'Teacher',
+    `iVersion` = 0
+WHERE `officialEmail` = @demo_email OR `alternativeEmail` = @demo_email;
+
+SET @demo_user_id = (
+  SELECT `ID`
+  FROM `user`
+  WHERE `officialEmail` = @demo_email OR `alternativeEmail` = @demo_email
+  LIMIT 1
+);
+SET @new_demo_user_id = (
+  SELECT GREATEST(COALESCE(MAX(`ID`), 900000000000000000) + 1, 900000000000000001)
+  FROM `user`
+);
+
+INSERT INTO `user` (
+  `ID`,
+  `gender`,
+  `firstName`,
+  `lastName`,
+  `isOwnOfficialEmail`,
+  `officialEmail`,
+  `officialEmailValidated`,
+  `alternativeEmail`,
+  `alternativeEmailValidated`,
+  `salt`,
+  `passwordMd5`,
+  `recoverCode`,
+  `validated`,
+  `allowMultipleSchools`,
+  `isAdmin`,
+  `registrationDate`,
+  `lastLoginDate`,
+  `awardPrintingDate`,
+  `comment`,
+  `saniValid`,
+  `orig_firstName`,
+  `orig_lastName`,
+  `iVersion`
+)
+SELECT
+  @new_demo_user_id,
+  'M',
+  'Demo',
+  'Teacher',
+  1,
+  @demo_email,
+  1,
+  @demo_email,
+  1,
+  @demo_salt,
+  @demo_password_md5,
+  '',
+  1,
+  1,
+  1,
+  NOW(),
+  NOW(),
+  NULL,
+  '',
+  1,
+  'Demo',
+  'Teacher',
+  0
+WHERE @demo_user_id IS NULL;
+
+UPDATE `user`
+SET `validated` = 1,
+    `officialEmailValidated` = 1,
+    `alternativeEmailValidated` = 1,
+    `isAdmin` = 1
+WHERE `officialEmail` = 'mularas78@gmail.com';
+SQL
+
+echo "Checking sample student group yft7zkqt..."
+SAMPLE_GROUP_ROW=$(mysql -ubebras -pbebras -h127.0.0.1 beaver_contest -N -e "SELECT CONCAT_WS(' | ', ID, name, contestID, code, password, isPublic) FROM \`group\` WHERE code = 'yft7zkqt' LIMIT 1;" || true)
+
+if [ -z "$SAMPLE_GROUP_ROW" ]; then
+  echo "Sample student group yft7zkqt is missing; trying to add it for contest 56."
+  mysql -ubebras -pbebras -h127.0.0.1 beaver_contest <<'SQL'
+SET @sample_group_code = 'yft7zkqt';
+SET @sample_group_password = 'zfvaxswk';
+SET @sample_group_id = (
+  SELECT `ID`
+  FROM `group`
+  WHERE `code` = @sample_group_code
+  LIMIT 1
+);
+SET @sample_group_password_id = (
+  SELECT `ID`
+  FROM `group`
+  WHERE `password` = @sample_group_password
+  LIMIT 1
+);
+SET @new_sample_group_id = (
+  SELECT CASE
+    WHEN COUNT(*) = 0 THEN 796142003655934888
+    WHEN SUM(`ID` = 796142003655934888) = 0 THEN 796142003655934888
+    ELSE GREATEST(MAX(`ID`) + 1, 900000000000000002)
+  END
+  FROM `group`
+);
+
+INSERT INTO `group` (
+  `ID`,
+  `schoolID`,
+  `grade`,
+  `gradeDetail`,
+  `userID`,
+  `name`,
+  `nbStudents`,
+  `nbTeamsEffective`,
+  `nbStudentsEffective`,
+  `contestID`,
+  `minCategory`,
+  `maxCategory`,
+  `language`,
+  `parentGroupID`,
+  `code`,
+  `password`,
+  `expectedStartTime`,
+  `startTime`,
+  `noticePrinted`,
+  `isPublic`,
+  `isGenerated`,
+  `bRecovered`,
+  `participationType`,
+  `iVersion`
+)
+SELECT
+  @new_sample_group_id,
+  1358,
+  12,
+  '',
+  1201,
+  'Castor 2015 : tous les niveaux',
+  100000,
+  0,
+  0,
+  56,
+  '',
+  '',
+  '',
+  NULL,
+  @sample_group_code,
+  @sample_group_password,
+  '2015-12-10 22:00:00',
+  NOW(),
+  0,
+  1,
+  0,
+  0,
+  'Unofficial',
+  0
+WHERE @sample_group_id IS NULL
+  AND @sample_group_password_id IS NULL
+  AND EXISTS (SELECT 1 FROM `contest` WHERE `ID` = 56);
+SQL
+  SAMPLE_GROUP_ROW=$(mysql -ubebras -pbebras -h127.0.0.1 beaver_contest -N -e "SELECT CONCAT_WS(' | ', ID, name, contestID, code, password, isPublic) FROM \`group\` WHERE code = 'yft7zkqt' LIMIT 1;" || true)
+fi
+
+if [ -n "$SAMPLE_GROUP_ROW" ]; then
+  echo "Sample student group: $SAMPLE_GROUP_ROW"
+else
+  echo "Sample student group yft7zkqt is missing; contest 56 may not be available after import."
+fi
+
+echo "Sample student group query result:"
+mysql -ubebras -pbebras -h127.0.0.1 beaver_contest -e "SELECT ID, name, contestID, code, password, isPublic FROM \`group\` WHERE code = 'yft7zkqt';" || echo "Sample student group query failed."
+
 echo "Configuring Apache for Render PORT..."
 PORT="${PORT:-10000}"
 
