@@ -1,0 +1,2332 @@
+<!doctype html>
+<div class="js-module" id="js-module-httpwwwfranceioiorgmodulesintegrationAPI01officialplatformprjs" data-content="(function () {
+
+'use strict';
+
+function getUrlParameterByName(name) {
+    name = name.replace(/[\[]/, &quot;\\[&quot;).replace(/[\]]/, &quot;\\]&quot;);
+    var regex = new RegExp(&quot;[\\?&amp;]&quot; + name + &quot;=([^&amp;#]*)&quot;),
+        results = regex.exec(location.href);
+    return results === null ? &quot;&quot; : decodeURIComponent(results[1].replace(/\+/g, &quot; &quot;));
+}
+
+function isCrossDomain() {
+   function isInIframe() {
+      try {
+         return window.self !== window.top;
+      } catch (e) {
+         return false;
+      }
+   }
+   function isSameDomain() {
+      var res = false;
+      function doNothing(document){}
+      try{
+          res = !! parent.document;
+      } catch(e){
+          res = false;
+      }
+      return res &amp;&amp; !getUrlParameterByName('xd');
+   }
+   return isInIframe() &amp;&amp; !isSameDomain();
+}
+
+var platform;
+
+if (!isCrossDomain()) {
+
+   /* Implementation of a platform proxy for the task iframe. This object is always
+    * available, but is effective only when setPlatform is called with a true
+    * platform object.
+    */
+
+   platform = {
+      registered_objects: [],
+      parent_platform: null,
+      initFailed: false,
+      setPlatform: function(platformArg) {
+         platform.parent_platform = platformArg;
+      },
+      trigger: function(event, content) {
+         for (var i = 0; i &lt; platform.registered_objects.length; i++) {
+            var object = platform.registered_objects[i];
+            if (typeof (object[event]) != &quot;undefined&quot;) {
+               object[event].apply(object, content);
+            }
+         }
+      },
+      subscribe: function(object) {
+         this.registered_objects.push(object);
+      },
+      unsubscribe: function(object) {
+         var index = this.registered_objects.indexOf(object);
+         if (index != -1) {
+            this.registered_objects.splice(index, 1);
+         }
+      },
+      validate: function(mode, success, error) {
+         // TODO: this case is a bit blur...
+         var res = platform.parent_platform.validate(mode, success, error);
+         this.trigger('validate', [mode]);
+         return res;
+      },
+      showView: function(views, success, error) {
+         return platform.parent_platform.showView(views, success, error);
+      },
+      askHint: function(platformToken, success, error) {
+         return platform.parent_platform.askHint(platformToken, success, error);
+      },
+      updateHeight: function(height, success, error) {
+         return platform.parent_platform.updateDisplay({height: height}, success, error);
+      },
+      updateDisplay: function(data, success, error) {
+         return platform.parent_platform.updateDisplay(data, success, error);
+      },
+      getTaskParams: function(key, defaultValue, success, error) {
+         return platform.parent_platform.getTaskParams(key, defaultValue, success, error);
+      },
+      openUrl: function(url, success, error) {
+         return platform.parent_platform.openUrl(url, success, error);
+      },
+      log: function(data, success, error) {
+         return platform.parent_platform.log(data, success, error);
+      },
+      initCallback: function(callback) {
+         this.initCallbackFun = callback;
+         if (platform.initDone) {
+            callback();
+         }
+      },
+      initWithTask: function(task) {
+         platform.task = task;
+         window.task = task;
+         platform.initDone = true;
+         if (platform.initCallbackFun) {
+            platform.initCallbackFun();
+         }
+      }
+   };
+
+} else {
+
+   // cross-domain version, depends on jschannel
+   platform = {};
+   var callAndTrigger = function(fun, triggerName, error, args) {
+      return function() {
+         try {
+            platform.trigger(triggerName, args);
+            fun(arguments);
+         } catch(e) {
+            error(e.toString()+'\n'+e.stack);
+         }
+      };
+   };
+   platform.ready = false;
+   platform.initFailed = false;
+   platform.initWithTask = function(task) {
+      if (typeof Channel === 'undefined') {
+         platform.initFailed = true;
+         console.error('cannot init task if jschannel is not present');
+         return;
+      }
+
+      var previousHeights = [];
+      var getHeightFiltered = function(success, error) {
+         // If the new height has already been returned just before the current
+         // height, we're in a loop between two heights, possibly because of a
+         // scrollbar.
+         // In that case we want to keep the largest of the two heights.
+         if(!task.getHeight) { error('task.getHeight not defined yet'); }
+         task.getHeight(function(h) {
+            if((previousHeights.length == 2) &amp;&amp;
+               (previousHeights[0] == h) &amp;&amp;
+               (previousHeights[1] &gt;= h)) {
+                  success(previousHeights[1]);
+                  return;
+            }
+            previousHeights.push(h);
+            previousHeights = previousHeights.slice(-2);
+            success(h);
+         }, error);
+      }
+
+      var gradeAnswer = function(params, success, error) {
+         var newSuccess = function(score, message, scoreToken) {
+            success([score, message, scoreToken]);
+         };
+         if (typeof task.gradeAnswer === 'function') {
+            task.gradeAnswer(params[0], params[1], newSuccess, error);
+         } else {
+            window.grader.gradeTask(params[0], params[1], newSuccess, error);
+         }
+      };
+      var channelId = getUrlParameterByName('channelId');
+      var chan = Channel.build({window: window.parent, origin: &quot;*&quot;, scope: channelId, onReady: function() {platform.ready = true;}});
+      platform.chan = chan;
+      platform.task = task;
+      platform.channelId = channelId;
+      chan.bind('task.load', function(trans, views) {task.load(views, callAndTrigger(trans.complete, 'load', trans.error, [views]), trans.error);trans.delayReturn(true);});
+      chan.bind('task.unload', function(trans) {task.unload(callAndTrigger(trans.complete, 'unload', trans.error, null), trans.error);trans.delayReturn(true);});
+      chan.bind('task.getHeight', function(trans) {getHeightFiltered(trans.complete, trans.error);trans.delayReturn(true);});
+      chan.bind('task.getMetaData', function(trans) {task.getMetaData(trans.complete, trans.error);trans.delayReturn(true);});
+      chan.bind('task.getViews', function(trans) {task.getViews(trans.complete, trans.error);trans.delayReturn(true);});
+      chan.bind('task.showViews', function(trans, views) {task.showViews(views, callAndTrigger(trans.complete, 'showViews', trans.error, [views]), trans.error);trans.delayReturn(true);});
+      chan.bind('task.updateToken', function(trans, token) {task.updateToken(token, trans.complete, trans.error);trans.delayReturn(true);});
+      chan.bind('task.reloadAnswer', function(trans, answer) {task.reloadAnswer(answer, callAndTrigger(trans.complete, 'reloadAnswer', trans.error, [answer]), trans.error);trans.delayReturn(true);});
+      chan.bind('task.getAnswer', function(trans) {task.getAnswer(trans.complete, trans.error);trans.delayReturn(true);});
+      chan.bind('task.getState', function(trans) {task.getState(trans.complete, trans.error);trans.delayReturn(true);});
+      chan.bind('task.getResources', function(trans) {task.getResources(trans.complete, trans.error);trans.delayReturn(true);});
+      chan.bind('task.reloadState', function(trans, state) {task.reloadState(state, callAndTrigger(trans.complete, 'reloadState', trans.error, [state]), trans.error);trans.delayReturn(true);});
+      chan.bind('grader.gradeTask', function(trans, params) {gradeAnswer(params, trans.complete, trans.error);trans.delayReturn(true);});
+      chan.bind('task.gradeAnswer', function(trans, params) {gradeAnswer(params, trans.complete, trans.error);trans.delayReturn(true);});
+   };
+
+   platform.registered_objects = [];
+   platform.trigger = function(event, content) {
+      for (var i = 0; i &lt; platform.registered_objects.length; i++) {
+         var object = platform.registered_objects[i];
+         if (typeof object[event] !== &quot;undefined&quot;) {
+            object[event].apply(object, content);
+         }
+      }
+   };
+   platform.subscribe = function(object) {
+      platform.registered_objects.push(object);
+   };
+   platform.unsubscribe = function(object) {
+      var index = platform.registered_objects.indexOf(object);
+      if (index != -1) {
+         platform.registered_objects.splice(index, 1);
+      }
+   };
+   platform.stop = function() {
+      platform.chan.destroy(); 
+   };
+   platform.validate = function (sMode, success, error) {
+      if (!success) success = function(){}; // not mandatory, as most code doesn't use it
+      if (!error) error = function() {console.error(arguments);};
+      platform.chan.call({method: &quot;platform.validate&quot;,
+         params: sMode,
+         error: error,
+         success: callAndTrigger(success, 'validate', error, [sMode])
+      });
+   };
+   platform.getTaskParams = function(key, defaultValue, success, error) {
+      if (!success) success = function(){};
+      if (!error) error = function() {console.error(arguments);};
+      platform.chan.call({method: &quot;platform.getTaskParams&quot;,
+         params: [key, defaultValue],
+         error: error,
+         success: success
+      });
+   };
+   platform.showView = function(views, success, error) {
+      if (!success) success = function(){};
+      if (!error) error = function() {console.error(arguments);};
+      platform.chan.call({method: &quot;platform.showView&quot;,
+         params: views,
+         error: error,
+         success: success
+      });
+   };
+   platform.askHint = function(platformToken, success, error) {
+      if (!success) success = function(){};
+      if (!error) error = function() {console.error(arguments);};
+      platform.chan.call({method: &quot;platform.askHint&quot;,
+         params: platformToken,
+         error: error,
+         success: success
+      });
+   };
+   platform.updateHeight = function(height, success, error) {
+      // Legacy
+      platform.updateDisplay({height: height}, success, error);
+   };
+   platform.updateDisplay = function(data, success, error) {
+      if (!success) success = function(){};
+      if (!error) error = function() {console.error(arguments);};
+      platform.chan.call({method: &quot;platform.updateDisplay&quot;,
+         params: data,
+         error: error,
+         success: success
+      });
+   };
+   platform.openUrl = function(url, success, error) {
+      if (!success) success = function(){};
+      if (!error) error = function() {console.error(arguments);};
+      platform.chan.call({method: &quot;platform.openUrl&quot;,
+         params: url,
+         error: error,
+         success: success
+      });
+   };
+   platform.log = function(data, success, error) {
+      if (!success) success = function(){};
+      if (!error) error = function() {console.error(arguments);};
+      platform.chan.call({method: &quot;platform.log&quot;,
+         params: data,
+         error: error,
+         success: success
+      });
+   };
+}
+
+window.platform = platform;
+
+}());
+"></div>
+<div class="js-module" id="js-module-httpwwwfranceioiorgmodulesintegrationAPI01installationAPI01pemFioibuttonsAndMessagesjs_0" data-part="0" data-content="(function() {
+
+'use strict';
+
+/*
+ * Implementation of the displayHelper API.
+ *
+ * Copyright (c) 2012 Association France-ioi, MIT License http://opensource.org/licenses/MIT
+ *
+ * See documentation for more information.
+ */
+
+window.displayHelper = {
+   loaded: false,
+   timeLoaded: 0,
+   checkAnswerInterval: null,
+   prevAnswer: '',
+   readOnly: false,
+   savedAnswer: '',
+   submittedAnswer: '',
+   submittedScore: 0,
+   hasAnswerChanged: true,
+   taskSelector: '#task',
+   hideValidateButton: false,
+   hideRestartButton: false,
+   confirmRestartAll: true,
+   showScore: false,
+   refreshMessages: true,
+   stoppedShowingResult: false,
+   previousMessages: {},
+   popupMessageShown: false,
+   alwaysAskLevelChange: false,
+   taskParams: {},
+   taskParamsInitialised: false,
+
+   thresholds: {},
+   // Legacy settings for old tasks ; new ones are expected to use thresholds
+   thresholdEasy: 60,
+   thresholdMedium: 120,
+
+   timeoutMinutes: 5,
+   avatarType: &quot;beaver&quot;,
+   bUseFullWidth: false,
+
+   hasLevels: false,
+   pointsAsStars: true, // TODO: false as default
+   unlockedLevels: 4,
+   forceNextTaskAfter: -1,
+   neverHadHard: false,
+   showMultiversionNotice: false,
+   taskLevel: '',
+
+   // Defaults
+   levels: ['easy', 'medium', 'hard'],
+   levelsIdx: { easy: 0, medium: 1, hard: 2 },
+   maxStars: 4,
+   popupMessageHandler: null,
+
+   formatTranslation: function(s, args) { return s.replace(/\{([^}]+)\}/g, function(_, match){ return args[match]; }); },
+
+   languageStrings: {
+      fr: {
+         version: &quot;Version&quot;,
+         levelVersionName_easy: &quot;version facile&quot;,
+         levelVersionName_medium: &quot;version moyenne&quot;,
+         levelVersionName_hard: &quot;version difficile&quot;,
+         levelVersionName_easy_stars: &quot;version à 2 étoiles&quot;,
+         levelVersionName_medium_stars: &quot;version à 3 étoiles&quot;,
+         levelVersionName_hard_stars: &quot;version à 4 étoiles&quot;,
+         levelName_easy: &quot;Facile&quot;,
+         levelName_medium: &quot;Moyen&quot;,
+         levelName_hard: &quot;Difficile&quot;,
+         warningTimeout: &quot;&lt;p&gt;Attention, cela fait plus de {0} minutes que vous êtes sur cette question.&lt;/p&gt;&lt;p&gt;Vous devriez sans doute changer de sujet, en cliquant sur le bouton tout en haut à droite.&lt;/p&gt;&quot;,
+         alright: &quot;D'accord&quot;,
+         moveOn: &quot;Passer à la suite&quot;,
+         solvedMoveOn: &quot;Vous avez entièrement résolu cette question, passez à une autre question.&quot;,
+         confirmRestart: &quot;Êtes-vous certain de vouloir recommencer cette version ?&quot;,
+         yes: &quot;Oui&quot;,
+         no: &quot;Non&quot;,
+         tryHardLevel: &quot;Nous vous proposons d'essayer la version 4 étoiles.&quot;,
+         tryMediumLevel: &quot;Nous vous proposons d'essayer la version 3 étoiles.&quot;,
+         tryNextTask: &quot;Nous vous proposons de passer à un autre sujet. S'il vous reste du temps, vous reviendrez plus tard essayer la version suivante.&quot;,
+         yourScoreIsNow: &quot;Votre score est maintenant :&quot;,
+         worseScoreStays: &quot;C'est moins bien qu'avant ; votre score reste :&quot;,
+         scoreStays: &quot;Votre score reste le même :&quot;,
+         score: &quot;Score :&quot;,
+         noPointsForLevel: &quot;Vous n'avez pas encore de points sur cette version.&quot;,
+         outOf: &quot; sur &quot;,
+         tryToDoBetterOrChangeTask: &quot;Essayez de faire encore mieux, ou passez à une autre question.&quot;,
+         tryToDoBetterOrMoveToNextLevel: &quot;Essayez de faire encore mieux, ou passez à une version plus difficile.&quot;,
+         bestPossibleScoreCongrats: &quot;C'est le meilleur score possible sur ce sujet ; félicitations !&quot;,
+         forMorePointsMoveToNextLevel: &quot;Pour obtenir plus de points, passez à une version plus difficile.&quot;,
+         youDidBetterBefore: &quot;Vous aviez fait mieux avant.&quot;,
+         scoreStays2: &quot;Votre score reste le même.&quot;,
+         reloadBestAnswer: &quot;Rechargez votre meilleure réponse.&quot;,
+         noAnswerSaved: &quot;Aucune réponse actuellement enregistrée pour cette version.&quot;,
+         validate: &quot;Valider&quot;,
+         restart: &quot;Recommencer&quot;,
+         harderLevelSolved: &quot;Attention : vous avez déjà résolu une version plus difficile. Vous ne pourrez pas gagner de points supplémentaires avec cette version.&quot;,
+         showLevelAnyway: &quot;Voir quand même&quot;,
+         scoreObtained: &quot;Score obtenu :&quot;,
+         hardVersionTakesTime: &quot;Résoudre une {0} peut vous prendre beaucoup de temps ; songez en priorité à répondre aux questions en {1} pour gagner des points rapidement.&quot;,
+         illKeepThatInMind: &quot;J'y prendrai garde&quot;,
+         harderLevelAvailable: &quot;Notez que pour cette question, vous pouvez résoudre directement une version plus difficile que celle-ci.&quot;,
+         lockedLevel: &quot;Cette version est verrouillée. Résolvez la précédente pour l'afficher !&quot;,
+         lockedLevelDev: &quot;Cette version est normalement verrouillée, et la précédente doit être résolue avant de pouvoir afficher cette version. Comme vous avez chargé ce sujet en local, vous pouvez néanmoins la voir.&quot;,
+         gradeThisAnswer: &quot;Évaluer cette réponse&quot;,
+
+         // The following messages are used for tasks with no feedback
+         saveAnswer: &quot;Enregistrer votre réponse&quot;,
+         answerSavedModifyOrCancelIt: &quot;Votre réponse a été enregistrée. Vous pouvez la modifier, ou bien {0} et recommencer.&quot;,
+         cancelIt: &quot;l'annuler&quot;,
+         warningDifferentAnswerSaved: &quot;Attention : une réponse différente est enregistrée.&quot;,
+         youMay: &quot;Vous pouvez {0}.&quot;,
+         reloadIt: &quot;la recharger&quot;,
+         saveThisNewAnswer: &quot;Enregistrer cette nouvelle réponse&quot;,
+
+         gradingInProgress: &quot;Évaluation en cours&quot;,
+         scoreIs: &quot;Votre score est de :&quot;,
+         point: &quot;point&quot;,
+         points: &quot;points&quot;,
+         // The following messages are used when viewing tasks after contest is over
+         contestOverScoreStays: &quot;Le concours étant terminé, votre réponse n'est pas enregistrée et votre score reste de :&quot;,
+         scoreWouldBecome: &quot;Avec cette réponse, votre score serait :&quot;,
+         reloadValidAnswer: &quot;Rechargez la réponse validée.&quot;,
+         contestOverAnswerNotSaved: &quot;Le concours est terminé : votre réponse n'est pas enregistrée.&quot;,
+         scoreWouldStay: &quot;Avec cette réponse, votre score resterait le même :&quot;,
+         answerNotSavedContestOver: &quot;Le concours étant terminé, votre réponse n'a pas été enregistrée. Vous pouvez {0}.&quot;,
+         reloadSubmittedAnswer: &quot;recharger la réponse que vous avez soumise&quot;,
+         difficultyWarning: &quot;&lt;strong&gt;Attention :&lt;/strong&gt; résoudre cette version prend du temps.&lt;br/&gt;Vous pourrez résoudre bien plus rapidement les versions 2 et 3 étoiles d'autres sujets.&quot;,
+         enemyWarning: &quot;&lt;strong&gt;Attention :&lt;/strong&gt; dans ce défi, l'ordinateur vous empêchera de trouver la solution par hasard.&quot;
+      },
+      en: {
+         version: &quot;Version&quot;,
+         levelVersionName_easy: &quot;easy version&quot;,
+         levelVersionName_medium: &quot;medium version&quot;,
+         levelVersionName_hard: &quot;hard version&quot;,
+         levelVersionName_easy_stars: &quot;2 stars version&quot;,
+         levelVersionName_medium_stars: &quot;3 stars version&quot;,
+         levelVersionName_hard_stars: &quot;4 stars version&quot;,
+         levelName_easy: &quot;Easy&quot;,
+         levelName_medium: &quot;Medium&quot;,
+         levelName_hard: &quot;Hard&quot;,
+         warningTimeout: &quot;&lt;p&gt;Warning, it has been more than {0} minutes since you started working on this task.&lt;/p&gt;&lt;p&gt;You should probably switch to a diffrent task, by clicking on the button on the top-right.&lt;/p&gt;&quot;,
+         alright: &quot;Alright&quot;,
+         moveOn: &quot;Move on&quot;,
+         solvedMoveOn: &quot;You solved this task completely, move on to another task.&quot;,
+         confirmRestart: &quot;Are you sure you want to restart this version?&quot;,
+         yes: &quot;Yes&quot;,
+         no: &quot;No&quot;,
+         tryHardLevel: &quot;We suggest you try the 4 stars version.&quot;,
+         tryMediumLevel: &quot;We suggest you try the 3 stars version.&quot;,
+         tryNextTask: &quot;We suggest you try the next task. If you still have time, come back later and try the next version of this task.&quot;,
+         yourScoreIsNow: &quot;Your score is now:&quot;,
+         worseScoreStays: &quot;This is not as good as before. Your score stays:&quot;,
+         scoreStays: &quot;Your score stays the same:&quot;,
+         score: &quot;Score:&quot;,
+         noPointsForLevel: &quot;You have not received any points yet on this version.&quot;,
+         outOf: &quot; out of &quot;,
+         tryToDoBetterOrChangeTask: &quot;Try to do even better, or move on to another task.&quot;,
+         tryToDoBetterOrMoveToNextLevel: &quot;Try to do even better, or move on to a more difficult version.&quot;,
+         bestPossibleScoreCongrats: &quot;This is the best possible score on this task, congratulations!&quot;,
+         forMorePointsMoveToNextLevel: &quot;To obtain more points, move on to a harder version of this task.&quot;,
+         youDidBetterBefore: &quot;You did better before.&quot;,
+         scoreStays2: &quot;Your score stays the same.&quot;,
+         reloadBestAnswer: &quot;Reload your best answer.&quot;,
+         noAnswerSaved: &quot;No answer saved so far for this version.&quot;,
+         validate: &quot;Validate&quot;,
+         restart: &quot;Restart&quot;,
+         harderLevelSolved: &quot;Warning: you already solved a harder version of this task. You won't be able to obtain extra points with this version.&quot;,
+         showLevelAnyway: &quot;Show it to me anyways.&quot;,
+         scoreObtained: &quot;Obtained score:&quot;,
+         hardVersionTakesTime: &quot;Solving a {0} can take a lot of time. Consider working on the {1} to gain points quickly.&quot;,
+         illKeepThatInMind: &quot;I'll consider it.&quot;,
+         harderLevelAvailable: &quot;Note that for this task, you may try to directly work on a harder version than this one.&quot;,
+         lockedLevel: &quot;This version is locked. Solve the previous version to display it!&quot;,
+         lockedLevelDev: &quot;This version is normally locked, and the previous version must be solved before displaying this. As you opened this task locally, you can however display this version for testing purposes.&quot;,
+         gradeThisAnswer: &quot;Grade this answer&quot;,
+
+         // The following messages are used for tasks with no feedback
+         saveAnswer: &quot;Save this answer&quot;,
+         answerSavedModifyOrCancelIt: &quot;Your answer has been saved. You can modify it, or {0} and restart.&quot;,
+         cancelIt: &quot;cancel it&quot;,
+         warningDifferentAnswerSaved: &quot;Warning: a different answer was saved before.&quot;,
+         youMay: &quot;You may {0}.&quot;,
+         reloadIt: &quot;reload it&quot;,
+         saveThisNewAnswer: &quot;Save this new answer&quot;,
+
+         gradingInProgress: &quot;Grading in process&quot;,
+         scoreIs: &quot;Your score is:&quot;,
+         point: &quot;point&quot;,
+         points: &quot;points&quot;,
+         // The following messages are used when viewing tasks after contest is over
+         contestOverScoreStays: &quot;The contest being over, your new answer was not saved and your score stays:&quot;,
+         scoreWouldBecome: &quot;With this answer, your score would be:&quot;,
+         reloadValidAnswer: &quot;Reload the validated answer.&quot;,
+         contestOverAnswerNotSaved: &quot;The contest being over, your new answer was not saved.&quot;,
+         scoreWouldStay: &quot;With this answer, your score would stay the same:&quot;,
+         answerNotSavedContestOver: &quot;The contest being over, your answer was not saved. You may {0}.&quot;,
+         reloadSubmittedAnswer: &quot;reload the validated answer&quot;,
+         difficultyWarning: &quot;&lt;strong&gt;Warning:&lt;/strong&gt; solving this version takes time.&lt;br/&gt;You would solve the 2 or 3 star versions of other tasks more quickly.&quot;,
+         enemyWarning: &quot;&lt;strong&gt;Warning:&lt;/strong&gt; in this challenge, the computer will make sure you don't find the solution by chance.&quot;
+      },
+      sv: {
+         version: &quot;Version&quot;,
+         levelVersionName_easy: &quot;lätt version&quot;,
+         levelVersionName_medium: &quot;medelsvår version&quot;,
+         levelVersionName_hard: &quot;svår version&quot;,
+         levelVersionName_easy_stars: &quot;2-stjärnig version&quot;,
+         levelVersionName_medium_stars: &quot;3-stjärnig version&quot;,
+         levelVersionName_hard_stars: &quot;4-stjärnig version&quot;,
+         levelName_easy: &quot;Lätt&quot;,
+         levelName_medium: &quot;Medelsvår&quot;,
+         levelName_hard: &quot;Svår&quot;,
+         warningTimeout: &quot;&lt;p&gt;Varning: det har gått mer än {0} minuter sedan du började med den här uppgiften. &lt;/p&gt;&lt;p&gt;Du borde kanske byta till en annan uppgift, genom att klicka på knappen uppe till höger.&lt;/p&gt;&quot;,
+         alright: &quot;Okej&quot;,
+         moveOn: &quot;Gå vidare&quot;,
+         solvedMoveOn: &quot;Du löste uppgiften helt! Gå nu vidare till en annan uppgift.&quot;,
+         confirmRestart: &quot;Är du säker på att du vill börja om med den här versionen?&quot;,
+         yes: &quot;Ja&quot;,
+         no: &quot;Nej&quot;,
+         tryHardLevel: &quot;Vi föreslår att du provar den 4-stjärniga versionen.&quot;,
+         tryMediumLevel: &quot;Vi föreslår att du provar den 3-stjärniga versionen.&quot;,
+         tryNextTask: &quot;Vi föreslår att du provar nästa uppgift. Kom tillbaka senare och prova en svårare version av den här uppgiften.&quot;,
+         yourScoreIsNow: &quot;Din poäng är nu:&quot;,
+         worseScoreStays: &quot;Det är inte lika bra som tidigare. Poängen fortfarande:&quot;,
+         scoreStays: &quot;Din poäng är fortfarande:&quot;,
+         score: &quot;Poäng:&quot;,
+         noPointsForLevel: &quot;Du har inte fått några poäng än på den här versionen.&quot;,
+         outOf: &quot; utav &quot;,
+         tryToDoBetterOrChangeTask: &quot;Försök klara det ännu bättre, eller gå vidare till en annan uppgift.&quot;,
+         tryToDoBetterOrMoveToNextLevel: &quot;Försök klara det ännu bättre, eller gå vidare till en svårare version.&quot;,
+         bestPossibleScoreCongrats: &quot;Detta är högsta möjliga poäng på den här uppgiften. Grattis!&quot;,
+         forMorePointsMoveToNextLevel: &quot;För att få mer poäng, gå vidare till en svårare version av den här uppgiften.&quot;,
+         youDidBetterBefore: &quot;Det gick bättre tidigare.&quot;,
+         scoreStays2: &quot;Din poäng ändras inte.&quot;,
+         reloadBestAnswer: &quot;Ladda in ditt bästa svar.&quot;,
+         noAnswerSaved: &quot;No answer saved so far for this version.&quot;,
+         validate: &quot;Kontrollera svaret&quot;,
+         restart: &quot;Börja om&quot;,
+         harderLevelSolved: &quot;Varning: du har redan löst en svårare version av den här uppgiften. Du kommer inte kunna få mer poäng med den här versionen.&quot;,
+         showLevelAnyway: &quot;Visa den ändå.&quot;,
+         scoreObtained: &quot;Uppnådd poäng:&quot;,
+         hardVersionTakesTime: &quot;Att lösa en {0} kan ta lång tid. Fundera på om du ska jobba med en {1} för att tjäna poäng snabbare.&quot;,
+         illKeepThatInMind: &quot;Jag ska tänka på det.&quot;,
+         harderLevelAvailable: &quot;Notera att på den här uppgiften kan du direkt försöka med en svårare version än denna.&quot;,
+         lockedLevel: &quot;Den här versionen är låst. Lös den föregående nivån för att visa den!&quot;,
+         lockedLevelDev: &quot;This version is normally locked, and the previous version must be solved before displaying this. As you opened this task locally, you can however display this version for testing purposes.&quot;,
+         gradeThisAnswer: &quot;Bedöm svaret&quot;,
+
+         // The following messages are used for tasks with no feedback
+         saveAnswer: &quot;Spara svaret&quot;,
+         answerSavedModifyOrCancelIt: &quot;Ditt svar har sparats. Du kan ändra det, eller {0} och börja om.&quot;,
+         cancelIt: &quot;avbryta det&quot;,
+         warningDifferentAnswerSaved: &quot;Varning: ett annat svar finns redan sparat.&quot;,
+         youMay: &quot;Du kan {0}.&quot;,
+         reloadIt: &quot;ladda in det på nytt&quot;,
+         saveThisNewAnswer: &quot;Spara det här nya svaret&quot;,
+
+         gradingInProgress: &quot;Rättning pågår&quot;,
+         scoreIs: &quot;Din poäng är:&quot;,
+         point: &quot;poäng&quot;,
+         points: &quot;poäng&quot;,
+         // The following messages are used when viewing tasks after contest is over
+         contestOverScoreStays: &quot;Eftersom tävlingen är över sparas inte ditt svar och din poäng ändras inte.&quot;,
+         scoreWouldBecome: &quot;Med det här svaret, skulle din poäng vara:&quot;,
+         reloadValidAnswer: &quot;Ladda in det kontrollerade svaret.&quot;,
+         contestOverAnswerNotSaved: &quot;Eftersom tävlingen är över sparas inte ditt svar.&quot;,
+         scoreWouldStay: &quot;Med det här svaret, skulle din poäng inte ändras:&quot;,
+         answerNotSavedContestOver: &quot;Eftersom tävlingen är över sparas inte ditt svar. Du kan {0}.&quot;,
+         reloadSubmittedAnswer: &quot;ladda in det kontrollerade svaret på nytt&quot;,
+         difficultyWarning: &quot;&lt;strong&gt;Varning:&lt;/strong&gt; att lösa den här versionen tar lång tid.&lt;br/&gt;Det kan gå snabbare att lösa 2- eller 3-stjärniga versioner av andra uppgifter.&quot;,
+         enemyWarning: &quot;&lt;strong&gt;Varning:&lt;/strong&gt; i den här utmaningen kommer datorn se till att du inte hittar lösningen av en slump.&quot;
+      },
+      fi: {
+         version: &quot;Versio &quot;,
+         levelVersionName_easy: &quot;helppo versio&quot;,
+         levelVersionName_medium: &quot;hieman vaikeampi versio&quot;,
+         levelVersionName_hard: &quot;vaikea versio&quot;,
+         levelVersionName_easy_stars: &quot;2 tähden versio&quot;,
+         levelVersionName_medium_stars: &quot;3 tähden versio&quot;,
+         levelVersionName_hard_stars: &quot;4 tähden versio&quot;,
+         levelName_easy: &quot;Helppo&quot;,
+         levelName_medium: &quot;Hieman vaikeampi&quot;,
+         levelName_hard: &quot;Vaikea&quot;,
+         warningTimeout: &quot;&lt;p&gt;Huomio: on kulunut jo yli {0} minuuttia siitä, kun aloit tekemään tätä tehtävää.&lt;/p&gt;&lt;p&gt;Sinun mahdollisesti kannattaisi siirtyä yrittämään jotain toista tehtävää klikkaamalla oikean yläkulman nappia.&lt;/p&gt;&quot;,
+         alright: &quot;Ok&quot;,
+         moveOn: &quot;Siirry eteenpäin&quot;,
+         solvedMoveOn: &quot;Ratkaisit tämän tehtävän kokonaan, siirry nyt seuraavaan tehtävään.&quot;,
+         confirmRestart: &quot;Oletko varma, että haluat aloittaa tämän version alusta?&quot;,
+         yes: &quot;Kyllä&quot;,
+         no: &quot;Ei&quot;,
+         tryHardLevel: &quot;Ehdotamme, että kokeilet 4 tähden versiota.&quot;,
+         tryMediumLevel: &quot;Ehdotamme, että kokeilet 3 tähden versiota.&quot;,
+         tryNextTask: &quot;Ehdotamme, että kokeilet seuraavaa tehtävää. Jos sinulle jää vielä aikaa, voit myöhemmin palata takaisin tämän tehtävän pariin.&quot;,
+         yourScoreIsNow: &quot;Pisteesi nyt:&quot;,
+         worseScoreStays: &quot;Tämä on aiempaa alhaisempi. Pistemääränäsi säilyy:&quot;,
+         scoreStays: &quot;Pistemääränäsi sailyy:&quot;,
+         score: &quot;Pisteet:&quot;,
+         noPointsForLevel: &quot;Et ole vielä saanut pisteitä tästä versiosta.&quot;,
+         outOf: &quot; / &quot;,
+         tryToDoBetterOrChangeTask: &quot;Yritä saada vielä paremmat pisteet tai siirry toiseen tehtävään.&quot;,
+         tryToDoBetterOrMoveToNextLevel: &quot;Yritä saada vielä paremmat pisteet tai siirry saman tehtävän vaikeampaan versioon.&quot;,
+         bestPossibleScoreCongrats: &quot;Onnittelut: saavutit tehtävän maksimipistemäärän!&quot;,
+         forMorePointsMoveToNextLevel: &quot;Siirry tehtävän vaikeampaan versioon saadaksesi enemmän pisteitä.&quot;,
+         youDidBetterBefore: &quot;Sait aiemmin enemmän pisteitä.&quot;,
+         scoreStays2: &quot;Pistemääräsi säilyy samana.&quot;,
+         reloadBestAnswer: &quot;Palauta paras aiempi vastauksesi.&quot;,
+         noAnswerSaved: &quot;Tähän versioon ei ole vielä tallennettu vastausta.&quot;,
+         validate: &quot;Tarkista vastaus&quot;,
+         restart: &quot;Aloita alusta&quot;,
+         harderLevelSolved: &quot;Varoitus: olet jo ratkaissut vaikeamman version tästä tehtävästä. Tämän helpomman version ratkaiseminen ei voi korottaa pistemäärääsi.&quot;,
+         showLevelAnyway: &quot;Siirry joka tapauksessa.&quot;,
+         scoreObtained: &quot;Saatu pistemäärä:&quot;,
+         hardVersionTakesTime: &quot;{0} voi viedä runsaasti aikaa. {1} voi tuottaa pisteitä nopeammin.&quot;,
+         illKeepThatInMind: &quot;Ymmärrän tämän.&quot;,
+         harderLevelAvailable: &quot;Huomaa, että voit myös suoraan koittaa ratkaista vaikeampaa versiota tästä tehtävästä.&quot;,
+         lockedLevel: &quot;Tämä versio on vielä lukittu: ratkaise ensin helpompi versio!&quot;,
+         lockedLevelDev: &quot;This version is normally locked, and the previous version must be solved before displaying this. As you opened this task locally, you can however display this version for testing purposes.&quot;,
+         gradeThisAnswer: &quot;Tarkista vastaus&quot;,
+
+         // The following messages are used for tasks with no feedback
+         saveAnswer: &quot;Tallenna vastaus&quot;,
+         answerSavedModifyOrCancelIt: &quot;Vastauksesi on tallennettu. Voit muokata sitä tai {0} ja aloittaa uudelleen alusta.&quot;,
+         cancelIt: &quot;perua sen&quot;,
+         warningDifferentAnswerSaved: &quot;Varoitus: toisenlainen vastaus on tallennettu jo aiemmin.&quot;,
+         youMay: &quot;Voit {0}.&quot;,
+         reloadIt: &quot;ladata sen uudelleen&quot;,
+         saveThisNewAnswer: &quot;tallentaa tämän uuden vastauksen&quot;,
+
+         gradingInProgress: &quot;Pisteytystä suoritetaan&quot;,
+         scoreIs: &quot;Pistemääräsi on:&quot;,
+         point: &quot;piste&quot;,
+         points: &quot;pisteet&quot;,
+         // The following messages are used when viewing tasks after contest is over
+         contestOverScoreStays: &quot;Kilpailu on jo päättynyt, joten uutta vastaustasi ei enää tallennettu ja pistemääränäsi säilyy:&quot;,
+         scoreWouldBecome: &quot;Jos tämäkin vastaus huomioitaisiin, pistemääräsi olisi:&quot;,
+         reloadValidAnswer: &quot;Palauta aiemmin hyväksytty vastaus.&quot;,
+         contestOverAnswerNotSaved: &quot;Kilpailu on jo päättynyt, joten uutta vastaustasi ei enää tallennettu.&quot;,
+         scoreWouldStay: &quot;Jos tämäkin vastaus huomioitaisiin, pistemääräsi olisi yhä:&quot;,
+         answerNotSavedContestOver: &quot;Kilpailu on jo päättynyt, joten uutta vastaustasi ei enää tallennettu. Voit {0}.&quot;,
+         reloadSubmittedAnswer: &quot;palauttaa aiemmin lähetetyn vastauksen&quot;,
+         difficultyWarning: &quot;&lt;strong&gt;Varoitus:&lt;/strong&gt; tämän version ratkaiseminen vie aikaa.&lt;br/&gt;Saat luultavasti ratkaistua 2 tai 3 tähden version nopeammin.&quot;,
+         enemyWarning: &quot;&lt;strong&gt;Huomio:&lt;/strong&gt; tässä tehtävässä tietokone pyrkii varmistamaan, ettet voi löytää ratkaisua sattumalta.&quot;
+      },
+      de: {
+         version: &quot;Version&quot;,
+         levelVersionName_easy: &quot;leichte Version&quot;,
+         levelVersionName_medium: &quot;mittlere Version&quot;,
+         levelVersionName_hard: &quot;schwere Version&quot;,
+         levelVersionName_easy_stars: &quot;2-Sterne-Version&quot;,
+         levelVersionName_medium_stars: &quot;3-Sterne-Version&quot;,
+         levelVersionName_hard_stars: &quot;4-Sterne-Version&quot;,
+         levelName_easy: &quot;Leicht&quot;,
+         levelName_medium: &quot;Mittel&quot;,
+         levelName_hard: &quot;Schwer&quot;,
+         warningTimeout: &quot;&lt;p&gt;Achtung, du bist schon seit {0} Minuten bei dieser Frage.&lt;/p&gt;&lt;p&gt;Du solltest jetzt zu einer anderen Aufgabe wechseln.&lt;/p&gt;&quot;,
+         alright: &quot;OK&quot;,
+         moveOn: &quot;Fortfahren&quot;,
+         solvedMoveOn: &quot;Du hast diese Frage bereits vollständig gelöst. Wähle eine andere Frage zum Bearbeiten aus.&quot;,
+         confirmRestart: &quot;Bist du sicher, dass du diese Version neustarten möchtest?&quot;,
+         yes: &quot;Ja&quot;,
+         no: &quot;Nein&quot;,
+         tryHardLevel: &quot;Wir schlagen dir vor, die 4-Sterne-Version zu bearbeiten.&quot;,
+         tryMediumLevel: &quot;Wir schlagen dir vor, die 3-Sterne-Version zu bearbeiten&quot;,
+         tryNextTask: &quot;Wir schlagen dir vor, die nächste Aufgabe zu bearbeiten. Wenn du am Ende noch Zeit hast, kannst du hierher zurückkehren und die schwerere Version bearbeiten.&quot;,
+         yourScoreIsNow: &quot;Dein Punktestand ist jetzt:&quot;,
+         worseScoreStays: &quot;Das ist weniger als vorher; dein Punktestand bleibt:&quot;,
+         scoreStays: &quot;Dein Punktestand bleibt gleich:&quot;,
+         score: &quot;Punktestand:&quot;,
+         noPointsForLevel: &quot;Du hast noch keine Punkte für diese Version erhalten.&quot;,
+         outOf: &quot; von &quot;,
+         tryToDoBetterOrChangeTask: &quot;Versuche, dich zu verbessern oder wähle eine andere Frage.&quot;,
+         tryToDoBetterOrMoveToNextLevel: &quot;Versuche, dich zu verbessern oder wähle schwierigere Version.&quot;,
+         bestPossibleScoreCongrats: &quot;Das ist die bestmögliche Punktzahl für diese Aufgabe. Glückwunsch!&quot;,
+         forMorePointsMoveToNextLevel: &quot;Wähle eine schwerere Version aus, um noch mehr Punkte zu bekommen.&quot;,
+         youDidBetterBefore: &quot;Du hast dich verbessern.&quot;,
+         scoreStays2: &quot;Dein Punktestand bleibt gleich.&quot;,
+         reloadBestAnswer: &quot;Deine beste Antwort wieder laden.&quot;,
+         noAnswerSaved: &quot;Bisher noch keine Antwort für diese Version gespeichert.&quot;,
+         validate: &quot;Erstellen&quot;,
+         restart: &quot;Neustarten&quot;,
+         harderLevelSolved: &quot;Achtung: Du hast schon eine schwerere Version gelöst. Du kannst mit dieser Version keine zusätzlichen Punkte bekommen.&quot;,
+         showLevelAnyway: &quot;Trotzdem anzeigen&quot;,
+         scoreObtained: &quot;Erhaltene Punkte:&quot;,
+         hardVersionTakesTime: &quot;Eine {0} zu lösen kann dich viel Zeit kosten; Denke zunächst daran, die Fragen in {1} zu beantworten, um schnell Punkte zu bekommen.&quot;,
+         illKeepThatInMind: &quot;Ich hab das verstanden&quot;,
+         harderLevelAvailable: &quot;Beachte, dass du bei dieser Frage direkt zu einer schwereren Version gehen kannst.&quot;,
+         lockedLevel: &quot;Diese Version ist noch gesperrt. Löse die vorherige um diese freizuschalten.&quot;,
+         lockedLevelDev: &quot;This version is normally locked, and the previous version must be solved before displaying this. As you opened this task locally, you can however display this version for testing purposes.&quot;,
+         gradeThisAnswer: &quot;Diese Antwort auswerten&quot;,
+
+         // The following messages are used for tasks with no feedback
+         saveAnswer: &quot;Antwort speichern&quot;,
+         answerSavedModifyOrCancelIt: &quot;Deine Antwort wurde eingereicht. Du kannst sie noch bearbeiten, oder {0} und neu beginnen.&quot;,
+         cancelIt: &quot;Abbrechen&quot;,
+         warningDifferentAnswerSaved: &quot;Achtung: Eine andere Antwort ist bereits gespeichert!&quot;,
+         youMay: &quot;Du kannst {0}.&quot;,
+         reloadIt: &quot;Neu laden&quot;,
+         saveThisNewAnswer: &quot;Diese Antwort speichern&quot;,
+
+         gradingInProgress: &quot;Das Ergebnis wird ausgewertet …&quot;,
+         scoreIs: &quot;Dein Punktestand beträgt:&quot;,
+         point: &quot;Punkt&quot;,
+         points: &quot;Punkte&quot;,
+         // The following messages are used when viewing tasks after contest is over
+         contestOverScoreStays: &quot;Der Contest ist vorbei, deine Antwort wurde nicht eingereicht und deine Punktestand bleibt:&quot;,
+         scoreWouldBecome: &quot;Mit dieser Antwort wäre dein Punktestand:&quot;,
+         reloadValidAnswer: &quot;Die gültige Antwort neu laden.&quot;,
+         contestOverAnswerNotSaved: &quot;Der Contest ist vorbei, deine Antwort wurde nicht eingereicht.&quot;,
+         scoreWouldStay: &quot;Mit dieser Antwort bliebe dein Punktestand gleich:&quot;,
+         answerNotSavedContestOver: &quot;Der Contest ist vorbei, deine Antwort wurde nicht eingereicht. Du kannst {0}.&quot;,
+         reloadSubmittedAnswer: &quot;Lade die Lösung, die du eingereicht hast&quot;,
+         difficultyWarning: &quot;&lt;strong&gt;Achtung:&lt;/strong&gt; diese Version zu lösen kann einige Zeit in Anspruch nehmen.&lt;br/&gt;Die 2- und 3-Stern Version von anderen Aufgaben lassen sich schneller lösen.&quot;,
+         enemyWarning: &quot;&lt;strong&gt;Attention :&lt;/strong&gt; dans ce défi, l'ordinateur vous empêchera de trouver la solution par hasard.&quot;
+      },
+      ar: {
+         version: &quot;المستوى&quot;,
+         levelVersionName_easy: &quot;المستوى السهل&quot;,
+         levelVersionName_medium: &quot;المستوى المتوسط&quot;,
+         levelVersionName_hard: &quot;المستوى الصعب&quot;,
+         levelVersionName_easy_stars: &quot;المستوى الأول&quot;,
+         levelVersionName_medium_stars: &quot;المستوى الثاني&quot;,
+         levelVersionName_hard_stars: &quot;المستوى الثالث&quot;,
+         levelName_easy: &quot;سهل&quot;,
+         levelName_medium: &quot;متوسط&quot;,
+         levelName_hard: &quot;صعب&quot;,
+         warningTimeout: &quot;&lt;p&gt;لقد مر وقت طويل منذ أن بدأت في هذه المسألة, من الأفضل أن تبدأ في مسألة أخرى حتى لا يضيع الوقت&lt;/p&gt;&quot;,
+         alright: &quot;حسناً&quot;,
+         moveOn: &quot;استمر&quot;,
+         solvedMoveOn: &quot;لقد أجبت على هذا السؤال بالكامل. ابدأ في سؤال أخر&quot;,
+         confirmRestart: &quot;هل ترغب في بدء هذا سؤال من جديد؟&quot;,
+         yes: &quot;نعم&quot;,
+         no: &quot;لا&quot;,
+         tryHardLevel: &quot;نقترح أن تبدأ في المستوى الثالث للسؤال&quot;,
+         tryMediumLevel: &quot;نقترح أن تبدأ في المستوى الثاني للسؤال&quot;,
+         tryNextTask: &quot;نقترح أن تبدأ في المسألة التالية, وإذا تبقى عندك وقت يمكنك حل المستوى الأصعب في هذه المسألة لاحقاً&quot;,
+         yourScoreIsNow: &quot;مجموع نقاطك:&quot;,
+         worseScoreStays: &quot;هذا ليس جيداً. ما زالت نقاطك:&quot;,
+         scoreStays: &quot;نقاطك ما زالت كما هي:&quot;,
+         score: &quot;النقاط&quot;,
+         noPointsForLevel: &quot;لم تحقق أي نقاط في هذا المستوى&quot;,
+         outOf: &quot;من&quot;,
+         tryToDoBetterOrChangeTask: &quot;حاول في مسألة أخرى&quot;,
+         tryToDoBetterOrMoveToNextLevel: &quot;حاول في المستوى الأصعب&quot;,
+         bestPossibleScoreCongrats: &quot;مبروك ... لقد حصلت على أعلى درجة في هذا السؤال&quot;,
+         forMorePointsMoveToNextLevel: &quot;للحصول على المزيد من النقاط جاوب على المستوى الأصعب&quot;,
+         youDidBetterBefore: &quot;لقد قمت بها أفضل من هذا في وقت سابق&quot;,
+         scoreStays2: &quot;ما زالت نقاطك كما هي&quot;,
+         reloadBestAnswer: &quot;اعد تحميل إجابتك الأفضل&quot;,
+         noAnswerSaved: &quot;No answer saved so far for this version.&quot;,
+         validate: &quot;تحقق&quot;,
+         restart: &quot;ابدأ من جديد&quot;,
+         harderLevelSolved: &quot;لقد قمت بحل المستوى الأصعب في هذا السؤال, لن تتمكن من الحصول على درجات أعلى في هذا السؤال&quot;,
+         showLevelAnyway: &quot;اظهرها لي على أي حال&quot;,
+         scoreObtained: &quot;النقاط المكتسبة:&quot;,
+         hardVersionTakesTime: &quot;Solving a {0} can take a lot of time. Consider working on the {1} to gain points quickly.&quot;,
+         illKeepThatInMind: &quot;I'll consider it.&quot;,
+         harderLevelAvailable: &quot;تنبيه: يمكنك حل المستوى الأصعب في هذه المسألة مباشرة&quot;,
+         lockedLevel: &quot;هذا المستوى مغلق. يجب عليك حل المستوى السابق أولا&quot;,
+         lockedLevelDev: &quot;This version is normally locked, and the previous version must be solved before displaying this. As you opened this task locally, you can however display this version for testing purposes.&quot;,
+         gradeThisAnswer: &quot;قيم هذه الإجابة&quot;,
+
+         // The following messages are used for tasks with no feedback
+         saveAnswer: &quot;احفظ هذه الإجابة&quot;,
+         answerSavedModifyOrCancelIt: &quot;تم حفظ إجابتك, يمكنك تعديلها أو بدأها من جديد&quot;,
+         cancelIt: &quot;احذفها&quot;,
+         warningDifferentAnswerSaved: &quot;تنبيه: يوجد اجابة أخرى محفوظة سابقاً&quot;,
+         youMay: &quot;You may {0}.&quot;,
+         reloadIt: &quot;حملها من جديد&quot;,
+         saveThisNewAnswer: &quot;احفظ الإجابة الجديدة&quot;,
+
+         gradingInProgress: &quot;نقوم بالتقييم&quot;,
+         scoreIs: &quot;مجموع نقاطك:&quot;,
+         point: &quot;نقطة&quot;,
+         points: &quot;نقاط&quot;,
+         // The following messages are used when viewing tasks after contest is over
+         contestOverScoreStays: &quot;المسابقة انتهت. إجابتك الجديدة لم تحفظ ومجموع نقاطك ما زال:&quot;,
+         scoreWouldBecome: &quot; مع تلك الإجابة، مجموع نقاطك أصبح:&quot;,
+         reloadValidAnswer: &quot;اعد تحميل الإجابة المحققة&quot;,
+         contestOverAnswerNotSaved: &quot;المسابقة إنتهت ولم يتم حفظ إجاباتك الجديدة&quot;,
+         scoreWouldStay: &quot;بهذه الإجابة سوف يظل مجموع نقاطك كما هو&quot;,
+         answerNotSavedContestOver: &quot;The contest being over, your answer was not saved. You may {0}.&quot;,
+         reloadSubmittedAnswer: &quot;اعد تحميل الإجابة المحققة&quot;,
+         difficultyWarning: &quot;تنبيه: حل هذه النسخة سوف يستغرق وقت كثير. الإفضل أن تبدأ في حل مسائل أخرى&quot;,
+         enemyWarning: &quot;تحذير: في هذه المسألة سيمنعك الكمبيوتر من إيجاد الحل عن طريق الصدفة. فكر جيداً&quot;
+      },
+      es: {
+         version: &quot;Versión&quot;,
+         levelVersionName_easy: &quot;versión fácil&quot;,
+         levelVersionName_medium: &quot;versión moderada&quot;,
+         levelVersionName_hard: &quot;versión difícil&quot;,
+         levelVersionName_easy_stars: &quot;versión de 2 estrellas&quot;,
+         levelVersionName_medium_stars: &quot;versión de 3 estrellas&quot;,
+         levelVersionName_hard_stars: &quot;versión de 4 estrellas&quot;,
+         levelName_easy: &quot;Fácil&quot;,
+         levelName_medium: &quot;Moderado&quot;,
+         levelName_hard: &quot;Difícil&quot;,
+         warningTimeout: &quot;&lt;p&gt;Atención, ya llevas {0} minutos en esta pregunta.&lt;/p&gt;&lt;p&gt;Te recomendamos cambiar de tema haciendo click sobre el botón de arriba a la derecha.&lt;/p&gt;&quot;,
+         alright: &quot;De acuerdo&quot;,
+         moveOn: &quot;Pasar a la siguiente&quot;,
+         solvedMoveOn: &quot;Has resuelto completamente esta pregunta. Pasa a otra pregunta.&quot;,
+         confirmRestart: &quot;¿Estás seguro que deseas volver a iniciar esta versión?&quot;,
+         yes: &quot;Sí&quot;,
+         no: &quot;No&quot;,
+         tryHardLevel: &quot;Te recomendamos intentar la versión de 4 estrellas.&quot;,
+         tryMediumLevel: &quot;Te recomendamos intentar la versión de 3 estrellas.&quot;,
+         tryNextTask: &quot;Te recomendamos que pases a la siguiente pregunta. Si tienes tiempo, puedes volver más tarde para probar la siguiente versión&quot;,
+         yourScoreIsNow: &quot;Tu puntuación es ahora :&quot;,
+         worseScoreStays: &quot;Esto no está tan bien como antes; tu puntuación se mantiene en :&quot;,
+         scoreStays: &quot;tu puntuación se mantiene igual :&quot;,
+         score: &quot;Puntuación :&quot;,
+         noPointsForLevel: &quot;Aún no has recibido puntos en esta versión.&quot;,
+         outOf: &quot; de &quot;,
+         tryToDoBetterOrChangeTask: &quot;Intenta nuevamente para obtener una mejor puntuación, o pasa a la siguiente pregunta.&quot;,
+         tryToDoBetterOrMoveToNextLevel: &quot;Intenta nuevamente para obtener una mejor puntuación, o pasa a una versión más difícil.&quot;,
+         bestPossibleScoreCongrats: &quot;Esta es la mejor puntuación posible en este problema, ¡felicitaciones!&quot;,
+         forMorePointsMoveToNextLevel: &quot;Para obtener más puntos, pasa a una versión más difícil.&quot;,
+         youDidBetterBefore: &quot;Realizaste un mejor trabajo antes.&quot;,
+         scoreStays2: &quot;Tu puntuación se mantiene igual.&quot;,
+         reloadBestAnswer: &quot;Recargar tu mejor respuesta.&quot;,
+         noAnswerSaved: &quot;Aún no hay respuesta guardada para esta versión.&quot;,
+         validate: &quot;Validar&quot;,
+         restart: &quot;Reiniciar&quot;,
+         harderLevelSolved: &quot;Atención: ya has resuelto una versión más difícil. No puedes ganar puntos extra con esta versión.&quot;,
+         showLevelAnyway: &quot;Mostrar el nivel de igual manera&quot;,
+         scoreObtained: &quot;Puntuación obtenida:&quot;,
+         hardVersionTakesTime: &quot;Resolver una {0} puede tomar mucho tiempo; te aconsejamos priorizar el resolver las preguntas en {1} para ganar puntos más rápidamente.&quot;,
+         illKeepThatInMind: &quot;Lo tendré en mente&quot;,
+         harderLevelAvailable: &quot;Nota que para esta pregunta, puedes resolver directamente una versión más difícil que esta.&quot;,
+         lockedLevel: &quot;Esta versión está bloqueada. Resuelve la version anterior para verla.&quot;,
+         lockedLevelDev: &quot;This version is normally locked, and the previous version must be solved before displaying this. As you opened this task locally, you can however display this version for testing purposes.&quot;,
+         gradeThisAnswer: &quot;Evaluar esta respuesta&quot;,
+
+         // The following messages are used for tasks with no feedback
+         saveAnswer: &quot;Guardar tu respuesta&quot;,
+         answerSavedModifyOrCancelIt: &quot;Tu respuesta fue guardada. Puedes modificarla, o bien {0} y reiniciar.&quot;,
+         cancelIt: &quot;cancelarla&quot;,
+         warningDifferentAnswerSaved: &quot;Atención: una respuesta diferente ha sido guardada.&quot;,
+         youMay: &quot;Tú puedes {0}.&quot;,
+         reloadIt: &quot;recargarla&quot;,
+         saveThisNewAnswer: &quot;Guardar esta nueva respuesta&quot;,
+
+         gradingInProgress: &quot;Evaluación en curso&quot;,
+         scoreIs: &quot;Tu puntuación es:&quot;,
+         point: &quot;punto&quot;,
+         points: &quot;puntos&quot;,
+         // The following messages are used when viewing tasks after contest is over
+         contestOverScoreStays: &quot;La actividad está terminando, tu respuesta no ha sido guardada y tu puntuación se mantiene en:&quot;,
+         scoreWouldBecome: &quot;Con esta respuesta, tu puntuación será :&quot;,
+         reloadValidAnswer: &quot;Volver a cargar la respuesta válida.&quot;,
+         contestOverAnswerNotSaved: &quot;La actividad ha terminado: tu respuesta no fue guardada.&quot;,
+         scoreWouldStay: &quot;Con esta respuesta, tu puntuación será la misma:&quot;,
+         answerNotSavedContestOver: &quot;La actividad está terminando y tu respuesta no ha sido guardada. Tú puedes {0}.&quot;,
+         reloadSubmittedAnswer: &quot;recargar la respuesta que ha enviado&quot;,
+         difficultyWarning: &quot;&lt;strong&gt;Advertencia:&lt;/strong&gt; resolver esta versión toma tiempo.&lt;br/&gt;Puedes resolver más rápidamente las versiones de 2 y 3 estrellas de otros problemas.&quot;,
+         enemyWarning: &quot;&lt;strong&gt;Advertencia:&lt;/strong&gt; en este desafío, la computadora se asegurará que no encuentres la respuesta por casualidad.&quot;
+      },
+      it: {
+         version: &quot;Versione&quot;,
+         levelVersionName_easy: &quot;versione facile&quot;,
+         levelVersionName_medium: &quot;versione media&quot;,
+         levelVersionName_hard: &quot;versione difficile&quot;,
+         levelVersionName_easy_stars: &quot;versione a 2 stelle&quot;,
+         levelVersionName_medium_stars: &quot;versione a 3 stelle&quot;,
+         levelVersionName_hard_stars: &quot;versione a 4 stelle&quot;,
+         levelName_easy: &quot;Facile&quot;,
+         levelName_medium: &quot;Medio&quot;,
+         levelName_hard: &quot;Difficile&quot;,
+         warningTimeout: &quot;&lt;p&gt;Attenzione, sono più di {0} minuti che sei su questa domanda.&lt;/p&gt;&lt;p&gt;Dovresti cambiare argomento, cliccando sul pulsante in alto a destra.&lt;/p&gt;&quot;,
+         alright: &quot;Va bene&quot;,
+         moveOn: &quot;Vai avanti&quot;,
+         solvedMoveOn: &quot;Hai risolto completamente questo quesito, passa a un'altra domanda.&quot;,
+         confirmRestart: &quot;Sei sicuro di voler ricominciare questa versione ?&quot;,
+         yes: &quot;Sì&quot;,
+         no: &quot;No&quot;,
+         tryHardLevel: &quot;Ti proponiamo di provare la versione 4 stelle.&quot;,
+         tryMediumLevel: &quot;Ti proponiamo di provare la versione 3 stelle.&quot;,
+         tryNextTask: &quot;Ti proponiamo di passare all'argomento successivo. Se ti resta del tempo, potrai riprovare più tardi la seguente versione.&quot;,
+         yourScoreIsNow: &quot;Adesso il tuo punteggio è :&quot;,
+         worseScoreStays: &quot;Non è buono come prima ; il tuo punteggio rimane :&quot;,
+         scoreStays: &quot;Il tuo punteggio resta lo stesso :&quot;,
+         score: &quot;Score :&quot;,
+         noPointsForLevel: &quot;Non hai ancora punti su questa versione.&quot;,
+         outOf: &quot; sur &quot;,
+         tryToDoBetterOrChangeTask: &quot;Prova a fare di meglio, o passa ad un'altra domanda.&quot;,
+         tryToDoBetterOrMoveToNextLevel: &quot;Prova a fare di meglio, o passa a una versione più difficile.&quot;,
+         bestPossibleScoreCongrats: &quot;E' il miglior punteggio possibile su quest'argomento ; congratulazioni !&quot;,
+         forMorePointsMoveToNextLevel: &quot;Per ottenere più punti, passa a una versione più difficile.&quot;,
+         youDidBetterBefore: &quot;Sei andato meglio prima.&quot;,
+         scoreStays2: &quot;Il tuo punteggio resta lo stesso.&quot;,
+         reloadBestAnswer: &quot;Ricarica la tua miglior risposta.&quot;,
+         noAnswerSaved: &quot;Nessuna risposta salvata per questa versione.&quot;,
+         validate: &quot;Convalida&quot;,
+         restart: &quot;Ricomincia&quot;,
+         harderLevelSolved: &quot;Attenzione : hai già risolto una versione più difficile. Non potrai più ottenere punti supplementari con questa versione.&quot;,
+         showLevelAnyway: &quot;Vedi lo stesso&quot;,
+         scoreObtained: &quot;Score ottenuto :&quot;,
+         hardVersionTakesTime: &quot;Risolvere una {0} ti può prendere molto tempo ; dai priorità alle risposte alle domande in {1} per guadagnare rapidamente punti.&quot;,
+         illKeepThatInMind: &quot;Me lo ricorderò&quot;,
+         harderLevelAvailable: &quot;Si noti che per questa domanda è possibile risolvere direttamente una versione più difficile di questa.&quot;,
+         lockedLevel: &quot;Questa versione è bloccata. Risolvi la precedente per visualizzarla !&quot;,
+         lockedLevelDev: &quot;This version is normally locked, and the previous version must be solved before displaying this. As you opened this task locally, you can however display this version for testing purposes.&quot;,
+         gradeThisAnswer: &quot;Valuta questa risposta&quot;,
+
+         // The following messages are used for tasks with no feedback
+         saveAnswer: &quot;Salva la tua risposta&quot;,
+         answerSavedModifyOrCancelIt: &quot;La sua risposta è stata registrata. Puoi cambiarla, oppure {0} e ricominciare da capo.&quot;,
+         cancelIt: &quot;annullarla&quot;,
+         warningDifferentAnswerSaved: &quot;Attenzione : è salvata una risposta diversa.&quot;,
+         youMay: &quot;Puoi {0}.&quot;,
+         reloadIt: &quot;ricaricala&quot;,
+         saveThisNewAnswer: &quot;Salva questa nuova risposta&quot;,
+
+         gradingInProgress: &quot;Valutazione in corso&quot;,
+         scoreIs: &quot;Il tuo punteggio è di :&quot;,
+         point: &quot;punto&quot;,
+         points: &quot;punti&quot;,
+         // The following messages are used when viewing tasks after contest is over
+         contestOverScoreStays: &quot;Il concorso è terminato, la tua risposta non è stata salvata e il tuo punteggio è di :&quot;,
+         scoreWouldBecome: &quot;Con questa risposta, il tuo punteggio sarà :&quot;,
+         reloadValidAnswer: &quot;Ricarica la risposta convalidata.&quot;,
+         contestOverAnswerNotSaved: &quot;Il concorso è terminato : la tua risposta non è stata salvata.&quot;,
+         scoreWouldStay: &quot;Con questa risposta, il tuo punteggio resterà lo stesso :&quot;,
+         answerNotSavedContestOver: &quot;Il concorso è terminato, la tua risposta non è stata salvata. Puoi {0}.&quot;,
+         reloadSubmittedAnswer: &quot;ricarica la risposta che hai inviato&quot;,
+         difficultyWarning: &quot;&lt;strong&gt;Attenzione :&lt;/strong&gt; risolvere questa versione richiede del tempo.&lt;br/&gt;Potresti risolvere molto più rapidamente le versioni 2 e 3 stelle di altri argomenti.&quot;,
+         enemyWarning: &quot;&lt;strong&gt;Attenzione &lt;/strong&gt; in questa sfida, il computer ti impedirà di trovare la soluzione per caso.&quot;
+      },
+      sl: {
+         version: &quot;Stopnja&quot;,
+         levelVersionName_easy: &quot;enostavna stopnja&quot;,
+         levelVersionName_medium: &quot;srednja stopnja&quot;,
+         levelVersionName_hard: &quot;težka stopnja&quot;,
+         levelVersionName_easy_stars: &quot;stopnja 2 zvezdici&quot;,
+         levelVersionName_medium_stars: &quot;stopnja 3 zvezdice&quot;,
+         levelVersionName_hard_stars: &quot;stopnja 4 zvezdice&quot;,
+         levelName_easy: &quot;Enostavno&quot;,
+         levelName_medium: &quot;Srednje&quot;,
+         levelName_hard: &quot;Težko&quot;,
+         warningTimeout: &quot;&lt;p&gt;Opozorilo: Odkar rešuješ to nalogo, je minilo že več kot {0} minut.&lt;/p&gt;&lt;p&gt;Najbolje, da izbereš drugo nalogo, tako da klikneš gumb v zgornjem desnem kotu.&lt;/p&gt;&quot;,
+         alright: &quot;V redu&quot;,
+         moveOn: &quot;Nadaljuj&quot;,
+         solvedMoveOn: &quot;Ta naloga je dokončana, nadaljuj z naslednjo nalogo.&quot;,
+         confirmRestart: &quot;Ali res želiš znova začeti to stopnjo?&quot;,
+         yes: &quot;Da&quot;,
+         no: &quot;Ne&quot;,
+         tryHardLevel: &quot;Predlagamo, da poizkusiš stopnjo s 4 zvezdicami.&quot;,
+         tryMediumLevel: &quot;Predlagamo, da poizkusiš stopnjo s 3 zvezdicami.&quot;,
+         tryNextTask: &quot;Prdlagamo, da poizkusiš naslednjo nalogo. Če bo ostalo dovolj časa, se vrni in poizkusi naslednjo stopnjo te naloge.&quot;,
+         yourScoreIsNow: &quot;Tvoj rezultat je:&quot;,
+         worseScoreStays: &quot;Rešitev ni tako dobra, kot prejšnja. Tvoj rezultat ostaja:&quot;,
+         scoreStays: &quot;Tvoj rezultat ostaja enak:&quot;,
+         score: &quot;Rezultat:&quot;,
+         noPointsForLevel: &quot;Na tej stopnji nisi dobil(-a) še nobene točke.&quot;,
+         outOf: &quot; od &quot;,
+         tryToDoBetterOrChangeTask: &quot;Poskusi nalogo rešiti še bolje ali se premakni na naslednjo nalogo.&quot;,
+         tryToDoBetterOrMoveToNextLevel: &quot;Poskusi nalogo rešiti še bolje ali se premakni na težjo stopnjo.&quot;,
+         bestPossibleScoreCongrats: &quot;Čestitamo, to je najboljši možni rezultat te naloge!&quot;,
+         forMorePointsMoveToNextLevel: &quot;Če želiš dobiti še več točk, se premakni na težjo stopnjo te naloge.&quot;,
+         youDidBetterBefore: &quot;Rešitev je boljša od prejšnje.&quot;,
+         scoreStays2: &quot;Tvoj rezultat ostaja enak.&quot;,
+         reloadBestAnswer: &quot;Znova naloži najboljšo rešitev.&quot;,
+         noAnswerSaved: &quot;No answer saved so far for this version.&quot;,
+         validate: &quot;Preveri&quot;,
+         restart: &quot;Začni znova&quot;,
+         harderLevelSolved: &quot;Opozorilo: Rešil(-a) si že težjo stopnjo te naloge. S to stopnjo ne boš dobil(-a) dodatnih točk.&quot;,
+         showLevelAnyway: &quot;Vseeno mi pokaži stopnjo.&quot;,
+         scoreObtained: &quot;Dobljeni rezultat:&quot;,
+         hardVersionTakesTime: &quot;Reševanje {0} lahko traja veliko časa. Razmisli o reševanju {1}, da boš hitro dobil(-a) točke.&quot;,
+         illKeepThatInMind: &quot;Razmislil(-a) bom.&quot;,
+         harderLevelAvailable: &quot;Ne pozabi, da lahko to nalogo rešuješ na težji stopnji kot je ta.&quot;,
+         lockedLevel: &quot;Ta stopnja je zaklenjena! Za pikaz moraš najprej rešiti prejšnjo stopnjo!&quot;,
+         lockedLevelDev: &quot;This version is normally locked, and the previous version must be solved before displaying this. As you opened this task locally, you can however display this version for testing purposes.&quot;,
+         gradeThisAnswer: &quot;Oceni ta odgovor&quot;,
+
+         // The following messages are used for tasks with no feedback
+         saveAnswer: &quot;Shrani ta odgovor&quot;,
+         answerSavedModifyOrCancelIt: &quot;Tvoj odgovor je bil shranjen. Lahko ga spremeniš ali {0} in začneš znova.&quot;,
+         cancelIt: &quot;prekličeš&quot;,
+         warningDifferentAnswerSaved: &quot;Opozorilo: Prej je bil shranjen drugačen odgovor.&quot;,
+         youMay: &quot;Lahko ga {0}.&quot;,
+         reloadIt: &quot;naložiš znova&quot;,
+         saveThisNewAnswer: &quot;Shrani ta nov odgovor&quot;,
+
+         gradingInProgress: &quot;Ocenjevanje poteka&quot;,
+         scoreIs: &quot;Tvoj rezultat je:&quot;,
+         point: &quot;točka&quot;,
+         points: &quot;točk&quot;,
+         // The following messages are used when viewing tasks after contest is over
+         contestOverScoreStays: &quot;Ker je tekmovanja konec, tvoj novi odgovor ni bil shranjen in rezultat bo ostal:&quot;,
+         scoreWouldBecome: &quot;S to rešitvijo bi bil tvoj rezultat:&quot;,
+         reloadValidAnswer: &quot;Znova naloži preverjeno rešitev.&quot;,
+         contestOverAnswerNotSaved: &quot;Ker je tekmovanja konec, tvoj novi odgovor ni bil shranjen.&quot;,
+         scoreWouldStay: &quot;S to rešitvijo bi tvoj rezultat ostal enak:&quot;,
+         answerNotSavedContestOver: &quot;Ker je tekmovanja konec, tvoj novi odgovor ni bil shranjen. Lahko {0}.&quot;,
+         reloadSubmittedAnswer: &quot;znova naložiš preverjeno rešitev&quot;,
+         difficultyWarning: &quot;&lt;strong&gt;Opozorilo:&lt;/strong&gt; Reševanje te stopnje lahko traja veliko časa. &lt;br/&gt;Hitreje lahko rešiš stopnje z 2 ali s 3 zvezdicami drugih nalog.&quot;,
+         enemyWarning: &quot;&lt;strong&gt;Opozorilo:&lt;/strong&gt; Pri tej nalogi ti bo računalnik preprečil naključno rešitev.&quot;
+      },
+   },
+
+   // themeStrings is like languageStrings, when setTheme is called, it will
+   // overwrite some languageStrings
+   themeStrings: {
+      coursera: {
+         solvedMoveOn: &quot;Votre score a été transmis à Coursera. Vous devez rafraîchir la page dans Coursera pour voir votre note.&quot;,
+         moveOn: &quot;Fermer cet exercice&quot;,
+         no: &quot;Rester&quot;
+      },
+   },
+
+   initLanguage: function() {
+      if (window.stringsLanguage == undefined) {
+         window.stringsLanguage = 'fr';
+      }
+      this.strings = this.languageStrings[window.stringsLanguage];
+      if(this.theme) { this.setTheme(this.theme); }
+   },
+   setTheme: function(theme) {
+      // Set a &quot;theme&quot;, which is just some different strings
+
+      var newStrings = this.themeStrings[theme];
+      if(!newStrings) { return; }
+      this.theme = theme;
+
+      if(!this.strings) { return; }
+      for(var key in newStrings) {
+         this.strings[key] = newStrings[key];
+      }
+   },
+
+   /***********************************************
+    * Initialization functions called by the task *
+    ***********************************************/
+   load: function(views) {
+      this.loading = true;
+      this.initLanguage();
+      var self = this;
+      this.showScore = (typeof views.grader !== 'undefined' &amp;&amp; views.grader === true);
+
+      function processTaskParams(taskParams) {
+         self.taskParams = taskParams;
+         self.taskParamsInitialised = true;
+         self.readOnly = (self.taskParams.readonly === true || self.taskParams.readOnly == 'true');
+         self.graderScore = +self.taskParams.noScore;
+         self.savedAnswer = '';
+
+         $(&quot;#difficultyWarning&quot;).html(self.strings.difficultyWarning).addClass(&quot;warningHeader&quot;);
+         $(&quot;#enemyWarning&quot;).html(self.strings.enemyWarning).addClass(&quot;warningHeader&quot;);
+         var addTaskHTML = '&lt;div id=&quot;displayHelperAnswering&quot; class=&quot;contentCentered&quot;&gt;';
+         // Place button placements at the end of HTML if they don't already exist
+         var placementNames = ['graderMessage', 'validate', 'cancel', 'saved'];
+         for (var iPlacement = 0; iPlacement &lt; placementNames.length; iPlacement++) {
+            var placement = 'displayHelper_' + placementNames[iPlacement];
+            if ($('#' + placement).length === 0) {
+               addTaskHTML += '&lt;div id=&quot;' + placement + '&quot;&gt;&lt;/div&gt;';
+            }
+         }
+         addTaskHTML += '&lt;/div&gt;';
+         if (!document.getElementById('displayHelperAnswering')) {
+            $(self.taskSelector).append(addTaskHTML);
+         }
+         self.loading = false;
+         self.loaded = true;
+         self.timeLoaded = new Date().getTime();
+         if (self.popupMessageShown) {
+            $('#displayHelperAnswering').hide();
+         }
+
+         var taskDelayWarning = function() {
+            if (self.popupMessageShown) {
+               self.taskDelayWarningTimeout = setTimeout(taskDelayWarning, 5000);
+            } else {
+               self.showPopupMessage(self.formatTranslation(self.strings.warningTimeout, [self.timeoutMinutes]), 'blanket', self.strings.alright, null, null, &quot;warning&quot;);
+               self.taskDelayWarningTimeout = null;
+            }
+         };
+         if (self.timeoutMinutes &gt; 0) {
+            self.taskDelayWarningTimeout = setTimeout(taskDelayWarning, self.timeoutMinutes * 60 * 1000);
+         }
+      };
+
+      if (window.task &amp;&amp; window.task.displayedSubTask &amp;&amp; window.task.displayedSubTask.taskParams) {
+         // Get the taskParams from the task if possible
+         // Avoids an async call in a function which isn't async
+         processTaskParams(window.task.displayedSubTask.taskParams);
+      } else {
+         window.platform.getTaskParams(null, null, processTaskParams);
+      }
+   },
+   unload: function() {
+      if (this.taskDelayWarningTimeout) {
+         this.taskDelayWarningTimeout = clearTimeout(this.taskDelayWarningTimeout);
+      }
+      clearInterval(this.checkAnswerInterval);
+      this.checkAnswerInterval = null;
+      this.loading = false;
+      this.loaded = false;
+      this.prevAnswer = '';
+      this.readOnly = false;
+      this.savedAnswer = '';
+      this.submittedAnswer = '';
+      this.submittedScore = 0;
+      this.hasAnswerChanged = true;
+      this.hideValidateButton = false;
+      this.hideRestartButton = false;
+      this.showScore = false;
+      this.refreshMessages = true;
+      this.stoppedShowingResult = false;
+      this.previousMessages = {};
+      this.popupMessageShown = false;
+      this.hasLevels = false;
+      this.pointsAsStars = true; // TODO: false as default
+      this.unlockedLevels = 4;
+      this.neverHadHard = false;
+      this.showMultiversionNotice = false;
+      this.taskLevel = '';
+      this.initLevelVars();
+      return true;
+   },
+
+   initLevelVars: function() {
+      var defaultLevelsRanks = { basic: 1, easy: 2, medium: 3, hard: 4 };
+      this.taskLevel = '';
+      this.levelsRanks = {};
+      this.levelsScores = {};
+      this.prevLevelsScores = {};
+      for(var i=0; i &lt; this.levels.length; i++) {
+         var levelName = this.levels[i];
+         if(typeof this.levelsRanks[levelName] == 'undefined') {
+            if(i == this.levels.length - 1) {
+               // The highest level always gets the max stars
+               this.levelsRanks[levelName] = this.maxStars;
+            } else {
+               this.levelsRanks[levelName] = defaultLevelsRanks[levelName];
+            }
+         }
+         this.levelsScores[levelName] = 0;
+         this.prevLevelsScores[levelName] = 0;
+      }
+   },
+
+   setupLevels: function(initLevel, reloadWithCallbacks, levels) {
+      this.reloadWithCallbacks = reloadWithCallbacks;
+      this.initLanguage();
+      if(levels) {
+         this.levels = levels;
+         this.levelsIdx = {};
+         for(var i = 0; i &lt; this.levels.length; i++) {
+            this.levelsIdx[this.levels[i]] = i;
+         }
+      }
+      this.initLevelVars();
+
+      var self = this;
+      function callSetupLevels() {
+         if(!initLevel) {
+            initLevel = self.taskParams.options.difficulty ? self.taskParams.options.difficulty : &quot;easy&quot;;
+         }
+         self.doSetupLevels(initLevel);
+      };
+      if (!this.taskParamsInitialised) {
+         if (window.task &amp;&amp; window.task.displayedSubTask &amp;&amp; window.task.displayedSubTask.taskParams) {
+            self.taskParams = window.task.displayedSubTask.taskParams;
+            callSetupLevels();
+         } else {
+            window.platform.getTaskParams(null, null, function (taskParams) {
+               self.taskParams = taskParams;
+               callSetupLevels();
+            });
+         }
+      } else {
+         callSetupLevels();
+      }
+   },
+   doSetupLevels: function(initLevel) {
+      // TODO To fix: levelWrapper-1 does not work correctly without this part,
+      // so the level is loaded twice initially (once here, and once below).
+      if(!this.reloadWithCallbacks) {
+         task.reloadStateObject(task.getDefaultStateObject(), true);
+         task.reloadAnswerObject(task.getDefaultAnswerObject());
+      }
+
+      this.setupParams();
+      if (!document.getElementById('popupMessage')) {
+         this.setupLevelsTabs();
+         $('#tabsMenu .li').on('click', function(event) {
+            event.preventDefault();
+            var newLevel = $(this).children().attr('href').split('#')[1];
+            displayHelper.setLevel(newLevel);
+         });
+      }
+
+      this.setLevel(initLevel);
+
+      if (this.unlockedLevels &gt; 1 &amp;&amp; this.showMultiversionNotice) {
+         this.showPopupMessage(this.strings.harderLevelAvailable, 'blanket', this.strings.alright,
+            function() {
+               this.showMultiversionNotice = false;
+            }
+         );
+      }
+   },
+   setupParams: function() {
+      var taskParams = this.taskParams;
+
+      this.hasLevels = true;
+      var paramNames = ['pointsAsStars', 'unlockedLevels', 'neverHadHard', 'showMultiversionNotice'];
+      for (var iParam = 0; iParam &lt; paramNames.length; iParam++) {
+         var param = paramNames[iParam];
+         if (taskParams[param] !== undefined) {
+            this[param] = taskParams[param];
+         }
+      }
+
+      var maxScore = taskParams.maxScore !== undefined ? taskParams.maxScore : 40;
+      this.levelsMaxScores = {};
+      for(var i=0; i &lt; this.levels.length; i++) {
+         var levelName = this.levels[i];
+         var levelMaxScore = maxScore * this.levelsRanks[levelName] / this.maxStars;
+         this.levelsMaxScores[levelName] = this.pointsAsStars ? levelMaxScore : Math.round(levelMaxScore);
+      }
+   },
+   setupLevelsTabs: function() {
+      var scoreHTML;
+      var maxScores = this.levelsMaxScores;
+      if (this.pointsAsStars) {
+         var titleStarContainers = [];
+         scoreHTML = '&lt;span&gt;&lt;/span&gt;&lt;span id=&quot;titleStars&quot;&gt;&lt;/span&gt;';
+         $('#task &gt; h1').append(scoreHTML);
+         drawStars('titleStars', this.maxStars, 24, 0, 'normal');
+      } else {
+         // Disabled: doesn't work with new tabs layout.
+         //scoreHTML = '&lt;div class=&quot;bestScore&quot;&gt;Score retenu : &lt;span id=&quot;bestScore&quot;&gt;0&lt;/span&gt; sur ' + maxScores.hard + '&lt;/div&gt;';
+         //$('#tabsContainer').append(scoreHTML);
+      }
+
+      var tabsStarContainers = [];
+      var curLevel;
+      // We only render the tabs if there is more than one level ; but we
+      // keep tabsMenu as some interfaces depend on that
+      var tabsInnerHTML = '';
+      var nbLevels = 0;
+      for (curLevel in this.levelsRanks) {
+         nbLevels++;
+         tabsInnerHTML += '&lt;span class=&quot;li&quot; id=&quot;tab_' + curLevel + '&quot;&gt;&lt;a href=&quot;#' + curLevel + '&quot;&gt;';
+         if (this.pointsAsStars) {
+            tabsInnerHTML += '&lt;span class=&quot;levelLabel&quot;&gt;' + this.strings.version + '&lt;/span&gt;&lt;span id=&quot;stars_' + this.levelsRanks[curLevel] + '&quot;&gt;&lt;/span&gt;';
+         } else {
+            tabsInnerHTML += this.strings[&quot;levelName_&quot; + curLevel] + ' — ' +
+               '&lt;span id=&quot;tabScore_' + curLevel + '&quot;&gt;0&lt;/span&gt; / ' + maxScores[curLevel];
+         }
+         tabsInnerHTML += '&lt;/a&gt;&lt;/span&gt;';
+      }
+      if(nbLevels &lt; 2) { tabsInnerHTML = ''; }
+      var tabsHTML = '&lt;div id=&quot;tabsMenu&quot;&gt;' + tabsInnerHTML + '&lt;/div&gt;';
+      $('#tabsContainer').append(tabsHTML);
+      if(nbLevels &gt;= 4) { $('#tabsMenu').addClass('moreTabs'); }
+
+      var self = this;
+      setTimeout(function() {
+         for (var iLevel = 0; iLevel &lt; self.levels.length; iLevel++) {
+            curLevel = self.levels[iLevel];
+            if (iLevel &gt;= self.unlockedLevels) {
+               $('#tab_' + curLevel).addClass('lockedLevel');
+            }
+            self.updateStarsAtLevel(curLevel);
+         }
+         self.updateLayout();
+      }, 100);
+
+      $('#tabsContainer').after('&lt;div id=&quot;popupMessage&quot;&gt;&lt;/div&gt;');
+   },
+
+   updateStarsAtLevel: function(level) {
+      var rate = this.levelsScores[level] / this.levelsMaxScores[level];
+      var iLevel = this.levelsIdx[level];
+      var starsIdx = this.levelsRanks[level];
+      var mode = 'normal';
+      if (iLevel &gt;= this.unlockedLevels) {
+         mode = 'locked';
+      }
+      if (this.graderScore &gt; this.levelsMaxScores[level]) {
+         mode = 'useless';
+      }
+      drawStars('stars_' + starsIdx, starsIdx, 14, rate, mode);
+   },
+
+   updateLayout: function() {
+      if (!this.bUseFullWidth) {
+         return
+      }
+      $('#valider').appendTo($('#displayHelper_validate'));
+      if(window.innerWidth &gt;= 1200) {
+          $('#task').addClass('largeScreen');
+          $('#solution').addClass('largeScreen');
+          $('#displayHelperAnswering').appendTo($('#zone_1'));
+      }
+      else {
+         $('#task').removeClass('largeScreen');
+         $('#solution').removeClass('largeScreen');
+         if ($('#showSolutionButton')) {
+            $('#displayHelperAnswering').insertBefore($('#showSolutionButton'));
+         }
+         else {
+            $('#displayHelperAnswering').appendTo($('#task'));
+         }
+     }
+   },
+
+   useFullWidth: function() {
+      // TODO: find a clean way to do this
+      try {
+         $('#question-iframe', window.parent.document).css('width', '100%');
+      } catch(e) {
+      }
+      $('body').css('width', '100%');
+      // This try is probably not needed but avoid breaking just in case
+      try {
+         $(document).ready(function () {displayHelper.updateLayout();});
+         $(window).resize(function () {displayHelper.updateLayout();});
+         this.bUseFullWidth = true;
+      } catch(e) {
+      }
+   },
+
+   // Deprecated: use directly levelsMaxScores instead
+   getLevelsMaxScores: function() {
+      return this.levelsMaxScores;
+   },
+
+   displayLevel: function (newLevel, calledFromSet, isLocked) {
+      // Only displays a level, without requesting a level change to the task
+      if(!calledFromSet) {
+         this.taskLevel = newLevel;
+      }
+
+      if (this.popupMessageShown &amp;&amp; !isLocked) {
+         $('#popupMessage').hide();
+         $('#displayHelperAnswering, #taskContent').show();
+         this.popupMessageShown = false;
+      }
+
+      var allLevels = ['basic', 'easy', 'medium', 'hard'];
+      if(this.levelsRanks) {
+         for(var lr in this.levelsRanks) {
+            allLevels.push(lr);
+         }
+      }
+      for(var i=0; i &lt; allLevels.length; i++) {
+         var curLevel = allLevels[i];
+         $('#tab_' + curLevel).removeClass('current');
+         $('.' + curLevel).hide();
+      }
+      $('#tab_' + newLevel).addClass('current');
+      $('.' + newLevel).show();
+
+      // Add prev and next classes to .current direct siblings
+      $('#tabsMenu .li').removeClass('prev next');
+      $('#tabsMenu .li.current').prev().addClass('prev');
+      $('#tabsMenu .li.current').next().addClass('next');
+   },
+
+   setLevel: function(newLevel, force) {
+      // Check for locked level
+      var lockedLevel = $('#tab_' + newLevel).hasClass('lockedLevel');
+
+      // Always make sure we're displaying the level
+      this.displayLevel(newLevel, true, lockedLevel);
+
+      // Skip actually changing the level if we're already on this level
+      if (this.taskLevel == newLevel &amp;&amp; !force) {
+         return;
+      }
+
+      var answer = task.getAnswerObject();
+      var state = task.getStateObject();
+      state.level = newLevel;
+      var self = this;
+
+      var afterReload = function() {
+         self.submittedScore = self.levelsScores[self.taskLevel];
+         self.refreshMessages = true;
+         self.checkAnswerChanged();
+         self.stopShowingResult();
+         if ($('#tab_' + newLevel).hasClass('lockedLevel')) {
+            if(window.location.protocol == 'file:') {
+               self.showPopupMessage(self.strings.lockedLevelDev, 'tab', self.strings.alright, reload);
+            } else {
+               self.showPopupMessage(self.strings.lockedLevel, 'lock');
+            }
+         } else if (!self.hasSolution) {
+            if ($('#tab_' + newLevel).hasClass('uselessLevel') &amp;&amp; self.levelsScores[newLevel] &lt; self.levelsMaxScores[newLevel]) {
+               self.showPopupMessage(self.strings.harderLevelSolved, 'tab', self.strings.showLevelAnyway, reload, null, &quot;warning&quot;);
+            } else if (newLevel == 'hard' &amp;&amp; self.neverHadHard) {
+               var hardVersionKey = &quot;levelVersionName_hard&quot;;
+               var easyVersionKey = &quot;levelVersionName_easy&quot;;
+               if (self.pointsAsStars) {
+                  hardVersionKey += &quot;_stars&quot;;
+                  easyVersionKey += &quot;_stars&quot;;
+               }
+               self.showPopupMessage(self.formatTranslation(self.strings.hardVersionTakesTime, [self.strings[hardVersionKey], self.strings[easyVersionKey]]),
+               'tab',
+                  self.strings.illKeepThatInMind, function() {
+                     self.neverHadHard = false;
+                     reload();
+                  }
+               );
+            }
+         }
+      };
+
+      var reload = function(callback) {
+         if(self.reloadWithCallbacks) {
+            task.reloadStateObject(state, function() {
+               task.reloadAnswerObject(answer, callback);
+            });
+         }
+         else {
+            task.reloadStateObject(state, true);
+            task.reloadAnswerObject(answer);
+            if(callback) { callback(); }
+         }
+      };
+
+      reload(afterReload);
+   },
+
+   getImgPath: function() {
+      if(window.contestsRoot) {
+         // Hack: when in the context of the platform, we need to change the path
+         return window.contestsRoot + '/' + window.contestFolder + '/';
+      } else if(window.modulesPath) {
+         var modulesPath = window.modulesPath[window.modulesPath.length-1] == '/' ? window.modulesPath : window.modulesPath + '/';
+         return modulesPath + 'img/';
+      } else {
+         return '../../../_common/modules/img/';
+      }
+   },
+
+   getAvatar: function(mood) {
+      if (displayHelper.avatarType == &quot;beaver&quot;) {
+         return &quot;castor.png&quot;;
+      } else if (displayHelper.avatarType == &quot;none&quot;) {
+        return &quot;&quot;;
+      } else {
+         if (mood == &quot;success&quot;) {
+            return &quot;laptop_success.png&quot;;
+         } else if (mood == &quot;warning&quot;) {
+            return &quot;laptop_warning.png&quot;;
+         }{
+            return &quot;laptop_error.png&quot;;
+         }
+      }
+   },
+
+
+   showPopupDialog: function(message, callback) {
+      if ($('#popupMessage').length == 0) {
+         $('#task').after('&lt;div id=&quot;popupMessage&quot;&gt;&lt;/div&gt;');
+      }
+
+      $('#popupMessage').addClass('floatingMessage');
+
+      var imgPath = displayHelper.getImgPath();
+
+      var popupHtml = '&lt;div class=&quot;container&quot;&gt;' +
+         '&lt;img class=&quot;messageArrow&quot; src=&quot;' + imgPath + 'fleche-bulle.png&quot;/&gt;' +
+         '&lt;div class=&quot;message&quot;&gt;' + message + '&lt;/div&gt;&lt;/div&gt;';
+
+      $('#popupMessage').html(popupHtml).show();
+
+      this.popupMessageShown = true;
+      if (callback) callback();
+      try {
+         $(parent.document).scrollTop(0);
+      } catch (e) {
+      }
+   },
+
+
+   errorPopupAvatar: function() {
+      $('#popupMessage').addClass('noAvatar');
+   },
+
+
+   showPopupMessage: function(message, mode, yesButtonText, agreeFunc, noButtonText, avatarMood, defaultText, disagreeFunc) {
+      if(this.popupMessageHandler) {
+         // A custom popupMessageHandler was defined, call it
+         // It must return true if it handled the popup, false if displayHelper
+         // should handle the popup instead
+         if(this.popupMessageHandler.apply(null, arguments)) {
+            return;
+         }
+      }
+
+      if ($('#popupMessage').length == 0) {
+         $('#task').after('&lt;div id=&quot;popupMessage&quot;&gt;&lt;/div&gt;');
+      }
+      if (mode == 'blanket' || mode == 'input') {
+         $('#popupMessage').addClass('floatingMessage');
+      } else {
+         $('#taskContent, #displayHelperAnswering').hide();
+         $('#popupMessage').removeClass('floatingMessage');
+      }
+      $('#popupMessage').removeClass('noAvatar');
+
+      var imgPath = displayHelper.getImgPath();
+      if(mode == 'lock') {
+         var buttonYes = '';
+      } else if (mode == 'input') {
+         var buttonYes = '&lt;button class=&quot;buttonYes&quot;&gt;' + (yesButtonText |"></div>
+<div class="js-module" id="js-module-httpwwwfranceioiorgmodulesintegrationAPI01installationAPI01pemFioibuttonsAndMessagesjs_1" data-part="1" data-content="| this.strings.validate) + '&lt;/button&gt;';
+      } else {
+         var buttonYes = '&lt;button class=&quot;buttonYes&quot;&gt;' + (yesButtonText || this.strings.alright) + '&lt;/button&gt;';
+      }
+      var buttonNo = '';
+      if (noButtonText != undefined) {
+         buttonNo = '&lt;button class=&quot;buttonNo&quot; style=&quot;margin-left: 10px;&quot;&gt;' + noButtonText + '&lt;/button&gt;';
+      }
+      var popupHtml = '&lt;div class=&quot;container&quot;&gt;' +
+         '&lt;img class=&quot;beaver&quot; src=&quot;' + imgPath + this.getAvatar(avatarMood) + '&quot; onerror=&quot;displayHelper.errorPopupAvatar();&quot;/&gt;' +
+         '&lt;img class=&quot;messageArrow&quot; src=&quot;' + imgPath + 'fleche-bulle.png&quot;/&gt;' +
+         '&lt;div class=&quot;message&quot;&gt;' + message + '&lt;/div&gt;';
+      if(mode == 'input') {
+         popupHtml += '&lt;input id=&quot;popupInput&quot; type=&quot;text&quot; value=&quot;' + (defaultText ? defaultText : '') + '&quot;&gt;&lt;/input&gt;';
+      }
+      popupHtml += '&lt;div class=&quot;buttonsWrapper&quot;&gt;' + buttonYes + buttonNo + '&lt;/div&gt;&lt;/div&gt;';
+      $('#popupMessage').html(popupHtml).show();
+      if(mode == 'input') {
+         $('#popupInput').focus();
+      }
+
+      var validateFunc = function() {
+         $('#popupMessage').hide();
+         $('#displayHelperAnswering, #taskContent').show();
+         displayHelper.popupMessageShown = false;
+         if (agreeFunc) {
+            if(mode == 'input') {
+                agreeFunc($('#popupInput').val());
+            } else {
+                agreeFunc();
+            }
+         }
+      };
+
+      var validateFuncNo = function() {
+         $('#popupMessage').hide();
+         $('#displayHelperAnswering, #taskContent').show();
+         displayHelper.popupMessageShown = false;
+         if (disagreeFunc) {
+            if(mode == 'input') {
+                disagreeFunc($('#popupInput').val());
+            } else {
+                disagreeFunc();
+            }
+         }
+      };
+
+      $('#popupMessage .buttonYes').click(validateFunc);
+      $('#popupMessage .buttonNo').click(validateFuncNo);
+      $('#popupInput').keypress(function (e) {
+         if(e.which === 13) { validateFunc(); }
+      });
+
+      $('#popupMessage .buttonNo').click(function() {
+         $('#popupMessage').hide();
+         $('#displayHelperAnswering, #taskContent').show();
+         displayHelper.popupMessageShown = false;
+      });
+      this.popupMessageShown = true;
+      try {
+         $(parent.document).scrollTop(0);
+      } catch (e) {
+      }
+   },
+
+   // Function to call at the beginning of task loading, before any html has
+   // been modified. It places the markers where the buttons will appear, if the
+   // markers are not present already.
+   showViews: function(views) {
+      // Fix for an old version of Firefox in which selection was stuck
+      try {
+         if (document.getSelection) {
+            var selection = document.getSelection();
+            if (selection !== undefined &amp;&amp; selection.removeAllRanges !== undefined) {
+               selection.removeAllRanges();
+            }
+         }
+      } catch (err) {}
+
+      this.views = views;
+      this.hasSolution = (typeof views.solution !== 'undefined');
+      if (this.hasSolution &amp;&amp; this.graderScore) {
+         this.prevSavedScore = this.graderScore;
+      }
+      var self = this;
+      this.checkAnswerInterval = setInterval(
+         function() {
+            self.checkAnswerChanged();
+         }, 1000);
+      task.getAnswer(function(answer) {
+         self.defaultAnswer = answer;
+         self.refreshMessages = true;
+         self.checkAnswerChanged();
+      });
+   },
+
+   reloadAnswer: function(strAnswer) {
+      this.savedAnswer = strAnswer;
+      this.prevAnswer = strAnswer;
+      this.submittedAnswer = strAnswer;
+      var that = this;
+      if (this.showScore) {
+         // TODO we only know the answer here, and not the state. Possibly problematic?
+         this.updateScore(strAnswer, true, function() {
+            that.checkAnswerChanged(); // necessary?
+         });
+      } else {
+         that.checkAnswerChanged(); // necessary?
+      }
+   },
+
+   reloadState: function() {
+      this.checkAnswerChanged(); // necessary?
+   },
+
+   stopShowingResult: function() {
+      this.stoppedShowingResult = true;
+      this.updateMessages();
+   },
+
+   /**********************
+    * Internal functions *
+    **********************/
+   restartAll: function() {
+      if(this.confirmRestartAll) {
+         this.showPopupMessage(this.strings.confirmRestart, 'blanket', this.strings.yes, this.restartAllNoConfirm, this.strings.no);
+      }
+      else {
+         this.restartAllNoConfirm();
+      }
+   },
+
+   restartAllNoConfirm: function() {
+      displayHelper.stopShowingResult();
+      if (!displayHelper.hasLevels) {
+         // TODO is this the desired behavior for no levels?
+         task.reloadAnswer('', function() {});
+      } else {
+         task.getAnswer(function(strAnswer) {
+            var answer = $.parseJSON(strAnswer);
+            var defaultAnswer = task.getDefaultAnswerObject();
+            var level = displayHelper.taskLevel;
+            answer[level] = defaultAnswer[level];
+            task.reloadAnswer(JSON.stringify(answer), function() {});
+         });
+      }
+   },
+
+   setValidateString: function(str) {
+      this.customValidateString = str;
+      $(&quot;#displayHelper_validate &gt; input&quot;).val(str);
+   },
+
+   callValidate: function() {
+      if (this.customValidate != undefined) {
+         this.customValidate();
+      } else {
+         platform.validate(&quot;none&quot;, function() {});
+      }
+   },
+
+   validate: function(mode) {
+      this.stoppedShowingResult = false;
+      var self = this;
+      if (mode == 'log') {
+         // Ignore it? Do something?
+      } else if (mode == 'cancel') {
+         this.savedAnswer = '';
+         task.reloadAnswer('', function() {
+            self.checkAnswerChanged();
+         });
+      } else if (mode == 'stay') {
+         // A few tasks erroneously call this validate directly instead of the
+         // platform's validate
+         this.callValidate();
+      } else {
+         task.getAnswer(function(strAnswer) {
+            if (!self.hasSolution) {
+               self.prevSavedScore = self.graderScore;
+               if (self.hasLevels) {
+                  self.prevLevelsScores[self.taskLevel] = self.levelsScores[self.taskLevel];
+               }
+            }
+            var refresh = function() {
+               self.refreshMessages = true;
+               self.checkAnswerChanged();
+            };
+            self.submittedAnswer = strAnswer;
+            if (self.showScore) {
+               self.updateScore(strAnswer, false, refresh, (mode == &quot;silent&quot;));
+            } else {
+               self.savedAnswer = strAnswer;
+               refresh();
+            }
+         });
+      }
+   },
+
+   updateScore: function(strAnswer, allLevels, callback, silentMode) {
+      var self = this;
+      function refresh() {
+         self.refreshMessages = true;
+         self.checkAnswerChanged();
+         callback();
+      }
+      if (allLevels) {
+         // TODO: make sure the grader doesn't evaluate each level at each call (most do right now!)
+         var levelsToDo = this.levels.slice();
+         var updateNextScore = null;
+         updateNextScore = function() {
+            var nextLevel = levelsToDo.shift();
+            if(nextLevel) {
+               self.updateScoreOneLevel(strAnswer, nextLevel, updateNextScore);
+            } else {
+               refresh();
+            }
+         }
+         updateNextScore();
+      } else {
+         this.updateScoreOneLevel(strAnswer, this.taskLevel, function() {
+            if (!silentMode) {
+               if (self.hasLevels) {
+                  self.showValidatePopup(self.taskLevel);
+               } else {
+                  self.showValidatePopup();
+               }
+            }
+            callback();
+         }, silentMode);
+      }
+   },
+   updateScoreOneLevel: function(strAnswer, gradedLevel, callback, silentMode) {
+      var self = this;
+      this.graderMessage = this.strings.gradingInProgress;
+      task.getLevelGrade(strAnswer, null, function(score, message) {
+         score = +score;
+         self.submittedScore = score;
+         if (self.hasSolution) {
+            self.graderScore = score;
+            self.levelsScores[gradedLevel] = score;
+         } else {
+            if (self.hasLevels) {
+               if (score &gt; self.levelsScores[gradedLevel]) {
+                  self.levelsScores[gradedLevel] = score;
+                  self.graderScore = score;
+                  if (self.savedAnswer === '') {
+                     self.savedAnswer = strAnswer;
+                  } else {
+                     var savedAnswerObj = $.parseJSON(self.savedAnswer);
+                     var answerObj = $.parseJSON(strAnswer);
+                     savedAnswerObj[gradedLevel] = answerObj[gradedLevel];
+                     self.savedAnswer = JSON.stringify(savedAnswerObj);
+                  }
+               }
+            } else if (score &gt; self.graderScore) {
+               self.savedAnswer = strAnswer;
+               self.graderScore = score;
+            }
+         }
+         if (silentMode) {
+            message = &quot;&quot;;
+         }
+         if (message !== undefined) {
+            self.graderMessage = message;
+         } else {
+            self.graderMessage = &quot;&quot;;
+         }
+         // TODO : should not be called from here, might update the display of a level not currently opened!
+         if (self.hasLevels) {
+            self.updateScoreDisplays(gradedLevel);
+         }
+         callback();
+      }, gradedLevel);
+   },
+   updateScoreDisplays: function(gradedLevel) {
+      var scores = this.levelsScores;
+      var maxScores = this.levelsMaxScores;
+      if (this.pointsAsStars) {
+         this.updateStarsAtLevel(gradedLevel);
+         var maxMaxScore = 0;
+         for(var lvl in maxScores) {
+            maxMaxScore = Math.max(maxScores[lvl], maxMaxScore);
+         }
+         drawStars('titleStars', this.maxStars, 24, this.graderScore / maxMaxScore, 'normal');
+      } else {
+         $('#tabScore_' + gradedLevel).html(scores[gradedLevel]);
+         $('#bestScore').html(this.graderScore);
+      }
+
+      var gradedLevelNum = $.inArray(gradedLevel, this.levels);
+      var curLevel;
+      // Possibly unlocking a level
+      if (maxScores[gradedLevel] == scores[gradedLevel]) {
+         var unlockedLevel = gradedLevelNum + 1;
+         if (unlockedLevel &lt; this.levels.length &amp;&amp; unlockedLevel &gt;= this.unlockedLevels) {
+            curLevel = this.levels[unlockedLevel];
+            $('#tab_' + curLevel).removeClass('lockedLevel');
+            this.unlockedLevels++;
+            this.updateStarsAtLevel(curLevel);
+            // Currently displayed level has been unlocked, display it
+            if(curLevel == this.taskLevel) {
+               this.setLevel(this.taskLevel, true);
+            }
+         }
+      }
+      if (scores[gradedLevel] == this.graderScore) {
+         // Marks levels that can't earn points as useless
+         for (curLevel in this.levelsRanks) {
+            if (maxScores[curLevel] &gt; this.graderScore) {
+               break;
+            }
+            if (this.pointsAsStars) {
+               this.updateStarsAtLevel(curLevel);
+            }
+            $('#tab_' + curLevel).addClass('uselessLevel');
+         }
+      }
+   },
+   showValidatePopup: function(gradedLevel) {
+      var curTime = new Date().getTime();
+      var secondsSinceLoaded = (curTime - this.timeLoaded) / 1000;
+      var actionNext = &quot;stay&quot;;
+      // Display popup to indicate what to do next
+      var fullMessage = this.graderMessage;
+      var maxScores = this.levelsMaxScores;
+      var buttonText = this.strings.alright;
+      var avatarMood = &quot;error&quot;;
+      if ((gradedLevel == undefined) &amp;&amp; (this.graderScore &gt;= this.taskParams.maxScore - 0.001)) {
+         avatarMood = &quot;success&quot;;
+         buttonText = this.strings.moveOn;
+         fullMessage += &quot;&lt;br/&gt;&lt;br/&gt;&quot;;
+         actionNext = &quot;nextTask&quot;;
+         fullMessage += this.strings.solvedMoveOn;
+      } else if (maxScores &amp;&amp; (gradedLevel !== undefined) &amp;&amp; this.graderScore &gt;= maxScores[gradedLevel] - 0.001) {
+         avatarMood = &quot;success&quot;;
+         buttonText = this.strings.moveOn;
+         fullMessage += &quot;&lt;br/&gt;&lt;br/&gt;&quot;;
+         var levelIdx = this.levelsIdx[gradedLevel];
+         var nextLevel = levelIdx !== undefined &amp;&amp; levelIdx &lt; this.levels.length-1 ? this.levels[levelIdx+1] : null;
+         if(nextLevel) {
+            // Offer to try next task if the user solved this difficulty slowly
+            var threshold = this.thresholds[gradedLevel];
+            if(!threshold) {
+                if(gradedLevel == &quot;medium&quot;) { threshold = this.thresholdMedium; }
+                else if(gradedLevel == &quot;easy&quot;) { threshold = this.thresholdEasy; }
+            }
+            if(levelIdx == this.forceNextTaskAfter) {
+               // Move onto next task after a specified difficulty
+               actionNext = &quot;top&quot;;
+               fullMessage += this.strings.tryNextTask;
+            } else if(!threshold || (threshold &amp;&amp; secondsSinceLoaded &lt; threshold)) {
+               actionNext = nextLevel;
+               if(nextLevel == &quot;medium&quot;) { fullMessage += this.strings.tryMediumLevel; }
+               if(nextLevel == &quot;hard&quot;) { fullMessage += this.strings.tryHardLevel; }
+            } else {
+               actionNext = &quot;nextTask&quot;;
+               fullMessage += this.strings.tryNextTask;
+            }
+         } else {
+            // Solved the last level, move on
+            actionNext = &quot;nextTask&quot;;
+            fullMessage += this.strings.solvedMoveOn;
+         }
+      }
+      var self = this;
+
+      // Offer an option to stay on the task instead of forcing nextTask
+      var noButtonText = null;
+      if (this.alwaysAskLevelChange || actionNext == &quot;nextTask&quot;) {
+         noButtonText = this.strings.no;
+      }
+
+      this.showPopupMessage(fullMessage, 'blanket', buttonText,
+         function() {
+            // TODO: replace with something compatible with the API.
+            try {
+               $(parent.document).scrollTop(0);
+            } catch (e) {
+            }
+            if (actionNext == &quot;nextTask&quot;) {
+               platform.validate(&quot;nextImmediate&quot;);
+            } else if (actionNext == &quot;top&quot;) {
+               platform.validate(&quot;top&quot;);
+            } else if(self.levelsIdx[actionNext] !== undefined) {
+               self.setLevel(actionNext);
+            }
+         },
+         noButtonText,
+         avatarMood
+      );
+   },
+
+   // Does task have unsaved answers?
+   hasNonSavedAnswer: function(callback) {
+      if (!task) {
+         return false;
+      }
+      var self = this;
+      task.getAnswer(function(curAnswer) {
+         if (curAnswer != self.prevAnswer) {
+            try {
+               if (self != top &amp;&amp; parent.Tracker) {
+                  var data = {
+                     dataType: 'nonSavedAnswer', teamID: parent.teamID, questionKey: parent.currentQuestionKey, answer: curAnswer
+                  };
+                  // Call TrackData, only when loaded in an iframe
+                  // this is not yet document in the API, but should be soonish
+                  parent.Tracker.trackData(data);
+               }
+            } catch (e) {}
+            self.prevAnswer = curAnswer;
+         }
+         if (curAnswer != self.submittedAnswer) {
+            self.submittedAnswer = '';
+            self.refreshMessages = true;
+         }
+         if (curAnswer == self.defaultAnswer &amp;&amp; self.savedAnswer === '') {
+            callback(false);
+         } else {
+            callback(curAnswer != self.submittedAnswer);
+         }
+      });
+   },
+
+   // Checks task.getAnswer() against previously recorded result, and calls
+   // displayHelper.updateMessages() accordingly.
+   checkAnswerChanged: function() {
+      if (this.loading) {
+         // Avoid cancelling the interval while the task is loading
+         return;
+      }
+      if (!this.loaded) {
+         this.checkAnswerInterval = clearInterval(this.checkAnswerInterval);
+         return;
+      }
+      var self = this;
+      this.hasNonSavedAnswer(function(hasNonSavedAnswer) {
+         if (hasNonSavedAnswer &amp;&amp; !self.hasAnswerChanged) {
+            self.refreshMessages = true;
+            self.hasAnswerChanged = true;
+         } else if (!hasNonSavedAnswer &amp;&amp; self.hasAnswerChanged) {
+            self.refreshMessages = true;
+            self.hasAnswerChanged = false;
+         }
+         if (self.refreshMessages) {
+            self.updateMessages();
+         }
+      });
+   },
+
+   getFullFeedbackSavedMessage: function(taskMode) {
+      var scoreDiffMsg = this.strings.score;
+      var showRetrieveAnswer = false;
+      if (this.submittedAnswer !== '' &amp;&amp; this.prevSavedScore !== undefined) {
+         if (!this.hasSolution) {
+            if (this.prevSavedScore &lt; this.submittedScore) {
+               scoreDiffMsg = this.strings.yourScoreIsNow;
+            } else if (this.prevSavedScore &gt; this.submittedScore) {
+               scoreDiffMsg = this.strings.worseScoreStays;
+               showRetrieveAnswer = true;
+            }
+            else {
+               scoreDiffMsg = this.strings.scoreStays;
+            }
+         } else {
+            if (this.prevSavedScore != this.submittedScore) {
+               scoreDiffMsg = this.strings.contestOverScoreStays + &quot; &quot; + this.prevSavedScore + &quot;. &quot; + this.strings.scoreWouldBecome;
+            } else if (this.submittedAnswer != this.savedAnswer) {
+               scoreDiffMsg = this.strings.contestOverScoreStays + &quot; &quot; + this.prevSavedScore + &quot;. &quot; + this.strings.scoreWouldStay;
+            } else {
+               scoreDiffMsg = this.strings.scoreIs;
+            }
+         }
+      }
+      scoreDiffMsg += &quot; &quot; + this.graderScore;
+      if (this.taskParams &amp;&amp; this.taskParams.maxScore) {
+         // taskParams may not always be loaded there
+         scoreDiffMsg += this.strings.outOf + this.taskParams.maxScore + &quot;.&quot;;
+      }
+      if ((this.hasSolution &amp;&amp; this.savedAnswer != this.prevAnswer) ||
+          (this.graderScore &gt; 0 &amp;&amp; (taskMode == 'saved_changed' || showRetrieveAnswer))) {
+         scoreDiffMsg += ' &lt;a href=&quot;#&quot; onclick=&quot;displayHelper.retrieveAnswer(); return false;&quot;&gt;' +  this.strings.reloadValidAnswer + '&lt;/a&gt;';
+      }
+      return scoreDiffMsg;
+   },
+   getFullFeedbackWithLevelsSavedMessage: function() {
+      var maxScoreLevel = this.levelsMaxScores[this.taskLevel];
+      var showRetrieveAnswer = false;
+      var message = &quot;&quot;;
+      var curAnswer = this.submittedAnswer;
+      var answerExists = false;
+      if (curAnswer !== '') {
+         curAnswer = $.parseJSON(curAnswer);
+         answerExists = !$.isEmptyObject(curAnswer);
+      }
+      if (!answerExists) {
+         if (this.levelsScores[this.taskLevel] &gt; 0) {
+            if (this.hideScoreDetails) {
+               message = this.strings.scoreObtained + ' &lt;span id=&quot;answerScore&quot;&gt;' + this.levelsScores[this.taskLevel] + &quot; &quot; + strPoint + &quot; &quot; + this.strings.outOf + &quot; &quot; + maxScoreLevel + &quot;.&lt;/span&gt;&lt;br/&gt;&quot;;;
+            } else {
+               showRetrieveAnswer = true;
+            }
+         } else {
+            message += this.strings.noPointsForLevel;
+         }
+      } else {
+         var strPoint = this.strings.point;
+         if (this.submittedScore &gt; 1) {
+            strPoint = this.strings.points;
+         }
+         message = this.strings.scoreObtained + ' &lt;span id=&quot;answerScore&quot;&gt;' + this.submittedScore + &quot; &quot; + strPoint + &quot; &quot; + this.strings.outOf + &quot; &quot; + maxScoreLevel + &quot;.&lt;/span&gt;&lt;br/&gt;&quot;;
+         if (this.hideScoreDetails) {
+         } else if (this.hasSolution) {
+            message += this.strings.contestOverAnswerNotSaved;
+            if (this.prevSavedScore !== undefined) {
+               showRetrieveAnswer = true;
+            }
+         } else {
+            var prevScore = this.prevLevelsScores[this.taskLevel];
+            if (this.prevSavedScore !== undefined) {
+               if (this.submittedScore &gt; prevScore) {
+                  if (this.submittedScore &lt; maxScoreLevel) {
+                     if (this.taskLevel == &quot;hard&quot;) {
+                        message += this.strings.tryToDoBetterOrChangeTask;
+                     } else {
+                        message += this.strings.tryToDoBetterOrMoveToNextLevel;
+                     }
+                  } else if (this.taskLevel == &quot;hard&quot;) {
+                     message += this.strings.bestPossibleScoreCongrats;
+                  } else {
+                     message += this.strings.forMorePointsMoveToNextLevel;
+                  }
+               } else if (this.submittedScore &lt; prevScore) {
+                  message += this.strings.youDidBetterBefore;
+                  showRetrieveAnswer = true;
+               }
+               else {
+                  message += this.strings.scoreStays2;
+               }
+            }
+         }
+      }
+      if (showRetrieveAnswer) {
+         message += ' &lt;a href=&quot;#&quot; onclick=&quot;displayHelper.retrieveAnswer(); return false;&quot;&gt;' + this.strings.reloadBestAnswer + '&lt;/a&gt;';
+      }
+      return message;
+   },
+   getFullFeedbackGraderMessage: function(taskMode) {
+      switch (taskMode) {
+         case 'saved_unchanged':
+            var color = 'red';
+            if (this.submittedScore == (this.taskParams.maxScore || 0)) {
+               color = 'green';
+            } else if (this.submittedScore &gt; 0) {
+               color = '#ff8c00';
+            }
+            if (this.graderMessage !== &quot;&quot;) {
+               if (!this.stoppedShowingResult) {
+                  return '&lt;div style=&quot;margin: .2em 0; color: ' + color + '; font-weight: bold;&quot;&gt;' + this.graderMessage + '&lt;/div&gt;';
+               }
+            }
+            break;
+      }
+      return '';
+   },
+   // TODO: rename function below to getFullFeedbackValidate, assuming it is not called from outside this file
+   getFullFeedbackValidateMessage: function(taskMode, disabledStr) {
+      var strValidate = this.strings.validate;
+      if (this.customValidateString != undefined) {
+         strValidate = this.customValidateString;
+      }
+      switch (taskMode) {
+         case 'saved_unchanged':
+            if (this.graderMessage !== &quot;&quot;) {
+               if (!this.hideValidateButton &amp;&amp; !this.hasSolution) {
+                  return '&lt;input type=&quot;button&quot; value=&quot;' + strValidate + '&quot; onclick=&quot;displayHelper.callValidate();&quot; ' +
+                     disabledStr + '/&gt;';
+               }
+            }
+            break;
+         case 'unsaved_unchanged':
+         case 'unsaved_changed':
+            if (!this.hideValidateButton) {
+               if (this.hasSolution) {
+                  return '&lt;input type=&quot;button&quot; value=&quot;' + this.strings.gradeThisAnswer + '&quot; onclick=&quot;displayHelper.validate(\'test\');&quot; ' +
+                     disabledStr + '/&gt;';
+               } else {
+                  return '&lt;input type=&quot;button&quot; value=&quot;' + strValidate + '&quot; onclick=&quot;displayHelper.callValidate();&quot; ' +
+                     disabledStr + '/&gt;';
+               }
+            }
+            break;
+         case 'saved_changed':
+            if (!this.hideValidateButton) {
+               if (this.hasSolution) {
+                  return '&lt;input type=&quot;button&quot; value=&quot;' + this.strings.gradeThisAnswer + '&quot; onclick=&quot;displayHelper.validate(\'test\');&quot; ' +
+                     disabledStr + '/&gt;';
+               } else {
+                  // was: Valider votre nouvelle réponse
+                  return '&lt;input type=&quot;button&quot; value=&quot;' + strValidate + '&quot; onclick=&quot;displayHelper.callValidate();&quot; ' +
+                     disabledStr + '/&gt;';
+               }
+            }
+            break;
+      }
+      return '';
+   },
+
+   lastSentHeight: null,
+   updateMessages: function() {
+      this.initLanguage();
+      var self = this;
+      this.refreshMessages = false;
+      var suffix, prefix;
+      if (this.hasAnswerChanged) {
+         suffix = 'changed';
+      } else {
+         suffix = 'unchanged';
+      }
+      if (this.savedAnswer !== '' &amp;&amp; this.savedAnswer != this.defaultAnswer) {
+         prefix = 'saved';
+      } else {
+         prefix = 'unsaved';
+      }
+      if (this.submittedAnswer !== '' &amp;&amp; this.submittedAnswer != this.savedAnswer) {
+         prefix = 'saved'; // equivalent, should be named differently
+         suffix = 'unchanged';
+      }
+      var taskMode = prefix + '_' + suffix;
+      var messages = { graderMessage: '', validate: '', cancel: '', saved: '' };
+      var disabledStr = this.readOnly ? ' disabled' : '';
+      if (this.showScore) {
+         if (!this.hideRestartButton) {
+            messages.cancel = '&lt;input type=&quot;button&quot; value=&quot;' + this.strings.restart + '&quot; onclick=&quot;displayHelper.restartAll();&quot;' +
+               disabledStr + '/&gt;&lt;/div&gt;';
+         }
+         messages.graderMessage = this.getFullFeedbackGraderMessage(taskMode);
+         messages.validate = this.getFullFeedbackValidateMessage(taskMode, disabledStr);
+         if (this.hasLevels) {
+            messages.saved = this.getFullFeedbackWithLevelsSavedMessage(taskMode);
+         } else {
+            messages.saved = this.getFullFeedbackSavedMessage(taskMode);
+         }
+      } else {
+         switch (taskMode) {
+            case 'unsaved_unchanged':
+            case 'unsaved_changed':
+               if (!this.hasSolution) {
+                  messages.validate = '&lt;input type=&quot;button&quot; value=&quot;' + this.strings.saveAnswer + '&quot; ' +
+                     'onclick=&quot;platform.validate(\'done\', function(){})&quot; ' + disabledStr + '/&gt;';
+               }
+               break;
+            case 'saved_unchanged':
+               if (!this.hasSolution) {
+                  messages.saved = this.formatTranslation(this.strings.answerSavedModifyOrCancelIt,
+                     [&quot;&lt;a href='#' onclick=\&quot;platform.validate('cancel', function(){}); return false;\&quot; &quot; + disabledStr + &quot;&gt;&quot; + this.strings.cancelIt + &quot;&lt;/a&gt;&quot;]);
+               } else {
+                  messages.saved = this.formatTranslation(this.strings.answerNotSavedContestOver,
+                     [&quot;&lt;a href='#' onclick=\&quot;displayHelper.validate('cancel'); return false;\&quot; &quot; + disabledStr + &quot;&gt;&quot; + this.strings.reloadSubmittedAnswer + &quot;&lt;/a&gt;&quot;]);
+               }
+               break;
+            case 'saved_changed':
+               messages.saved = &quot;&lt;br/&gt;&lt;b style='color: red;'&gt;&quot; + this.strings.warningDifferentAnswerSaved + &quot;&lt;/b&gt; &quot; +
+                  this.formatTranslation(this.strings.youMay, [&quot;&lt;a href='#' onclick='displayHelper.retrieveAnswer(); return false;'&gt;&quot; + this.strings.reloadIt + &quot;&lt;/a&gt;&quot;]);
+               if (!this.hideValidateButton) {
+                  messages.validate = &quot;&lt;input type='button' value='&quot; + this.strings.saveThisNewAnswer + &quot;' onclick=\&quot;platform.validate('done', function(){})\&quot; &quot; + disabledStr + &quot;/&gt;&quot;;
+               }
+               break;
+         }
+      }
+      for (var type in messages) {
+         if (this.loaded &amp;&amp; (typeof this.previousMessages[type] === 'undefined' || this.previousMessages[type] !== messages[type])) {
+            $('#displayHelper_' + type).html(messages[type]);
+            this.previousMessages[type] = messages[type];
+         }
+      }
+      if (this.pointsAsStars &amp;&amp; $('#answerScore').length) {
+         drawStars('answerScore', this.levelsRanks[this.taskLevel], 20,
+            this.levelsScores[this.taskLevel] / this.levelsMaxScores[this.taskLevel], 'normal');
+      }
+      window.task.getHeight(function(height) {
+         if (height != self.lastSentHeight) {
+            self.lastSentHeight = height;
+            window.platform.updateDisplay({height: height}, function(){});
+         }
+      });
+   },
+
+   getSavedAnswer: function() {
+      // Gets the previously saved answer
+      var retrievedAnswer;
+      if (this.hasLevels) {
+         var savedAnswerObj = this.savedAnswer &amp;&amp; $.parseJSON(this.savedAnswer);
+         if(savedAnswerObj) {
+            var retrievedAnswerObj = task.getAnswerObject();
+            retrievedAnswerObj[this.taskLevel] = savedAnswerObj[this.taskLevel];
+            retrievedAnswer = retrievedAnswerObj[this.taskLevel] &amp;&amp; JSON.stringify(retrievedAnswerObj);
+         } else {
+            retrievedAnswer = null;
+         }
+      } else {
+         retrievedAnswer = this.savedAnswer;
+      }
+      return retrievedAnswer;
+   },
+   retrieveAnswer: function() {
+      // Loads previously saved answer
+      var retrievedAnswer = this.getSavedAnswer();
+      if(!retrievedAnswer) {
+         this.showPopupMessage(this.strings.noAnswerSaved, 'blanket', this.strings.alright, null, null, &quot;warning&quot;);
+         return;
+      }
+      var self = displayHelper;
+      task.reloadAnswer(retrievedAnswer, function() {
+         self.submittedAnswer = self.savedAnswer;
+         self.updateScore(self.savedAnswer, false, function() {});
+      });
+   },
+   hasSavedAnswer: function() {
+      // Returns whether a saved answer exists
+      if (this.hasLevels) {
+         var savedAnswerObj = this.savedAnswer &amp;&amp; $.parseJSON(this.savedAnswer);
+         if(savedAnswerObj) {
+            return !!savedAnswerObj[this.taskLevel];
+         }
+      } else {
+         return !!this.savedAnswer;
+      }
+      return false;
+   },
+
+   sendBestScore: function(callback, scores, messages) {
+      var bestLevel = 'easy';
+      var bestScore = null;
+      for (var curLevel in scores) {
+         if (bestScore === null || bestScore &lt;= scores[curLevel]) {
+            bestLevel = curLevel;
+            bestScore = scores[curLevel];
+         }
+      }
+      callback(scores[bestLevel], messages[bestLevel] + &quot; (&quot; + this.strings[&quot;levelVersionName_&quot; + bestLevel] + &quot;)&quot;);
+   }
+};
+
+
+/*
+   draw nbStars stars of width starWidth in element of id id
+   fills rate% of them in yellow from the left
+   mode is &quot;norma&quot;, &quot;locked&quot; or &quot;useless&quot;
+*/
+function drawStars(id, nbStars, starWidth, rate, mode) {
+   $('#' + id).addClass('stars');
+
+   function clipPath(coords, xClip) {
+      var result = [[coords[0][0], coords[0][1]]];
+      var clipped = false;
+      for (var iCoord = 1; iCoord &lt;= coords.length; iCoord++) {
+         var x1 = coords[iCoord - 1][0];
+         var y1 = coords[iCoord - 1][1];
+         var x2 = coords[iCoord % coords.length][0];
+         var y2 = coords[iCoord % coords.length][1];
+         if (x2 &gt; xClip) {
+            if (!clipped) {
+               result.push([xClip, y1 + (y2 - y1) * (xClip - x1) / (x2 - x1)]);
+               clipped = true;
+            }
+         } else {
+            if (clipped) {
+               result.push([xClip, y1 + (y2 - y1) * (xClip - x1) / (x2 - x1)]);
+               clipped = false;
+            }
+            result.push([x2, y2]);
+         }
+      }
+      result.pop();
+      return result;
+   }
+
+   function pathFromCoords(coords) {
+      var result = 'm' + coords[0][0] + ',' + coords[0][1];
+      for (var iCoord = 1; iCoord &lt; coords.length; iCoord++) {
+         var x1 = coords[iCoord - 1][0];
+         var y1 = coords[iCoord - 1][1];
+         var x2 = coords[iCoord][0];
+         var y2 = coords[iCoord][1];
+         result += ' ' + (x2 - x1) + ',' + (y2 - y1);
+      }
+      result += 'z';
+      return result;
+   }
+
+   var fillColors = { normal: 'white', locked: '#ddd', useless: '#ced' };
+   var strokeColors = { normal: 'black', locked: '#ddd', useless: '#444' };
+   var starCoords = [[25, 60], [5, 37], [35, 30], [50, 5], [65, 30], [95, 37], [75, 60], [78, 90], [50, 77], [22, 90]];
+   var fullStarCoords = [
+      [[5, 37], [35, 30], [50, 5], [65, 30], [95, 37], [75, 60], [25, 60]],
+      [[22, 90], [50, 77], [78, 90], [75, 60], [25, 60]]
+   ];
+
+
+   if ($('#' + id).length == 0) {
+      return;
+   }
+   $('#' + id).html('');
+   var paper = new Raphael(id, starWidth * nbStars, starWidth * 0.95);
+   for (var iStar = 0; iStar &lt; nbStars; iStar++) {
+      var scaleFactor = starWidth / 100;
+      var deltaX = iStar * starWidth;
+      var coordsStr = pathFromCoords(starCoords, iStar * 100);
+
+      paper.path(coordsStr).attr({
+         fill: fillColors[mode],
+         stroke: 'none'
+      }).transform('s' + scaleFactor + ',' + scaleFactor + ' 0,0 t' + (deltaX / scaleFactor) + ',0');
+
+      var ratio = Math.min(1, Math.max(0, rate * nbStars  - iStar));
+      var xClip = ratio * 100;
+      if (xClip &gt; 0) {
+         for (var iPiece = 0; iPiece &lt; fullStarCoords.length; iPiece++) {
+            var coords = clipPath(fullStarCoords[iPiece], xClip);
+            var star = paper.path(pathFromCoords(coords)).attr({
+               fill: '#ffc90e',
+               stroke: 'none'
+            }).transform('s' + scaleFactor + ',' + scaleFactor + ' 0,0 t' + (deltaX / scaleFactor) + &quot;,0&quot;);
+         }
+      }
+      paper.path(coordsStr).attr({
+         fill: 'none',
+         stroke: strokeColors[mode],
+         'stroke-width': 5 * scaleFactor
+      }).transform('s' + scaleFactor + ',' + scaleFactor + ' 0,0 t' + (deltaX / scaleFactor) + ',0');
+   }
+}
+
+
+window.platform.subscribe(displayHelper);
+
+})();
+"></div>
+<div class="js-module" id="js-module-raphael221b_0" data-part="0" data-content="!function t(e,r){&quot;object&quot;==typeof exports&amp;&amp;&quot;object&quot;==typeof module?module.exports=r():&quot;function&quot;==typeof define&amp;&amp;define.amd?define([],r):&quot;object&quot;==typeof exports?exports.Raphael=r():e.Raphael=r()}(this,function(){return function(t){function e(i){if(r[i])return r[i].exports;var n=r[i]={exports:{},id:i,loaded:!1};return t[i].call(n.exports,n,n.exports,e),n.loaded=!0,n.exports}var r={};return e.m=t,e.c=r,e.p=&quot;&quot;,e(0)}([function(t,e,r){var i,n;i=[r(1),r(3),r(4)],n=function(t){return t}.apply(e,i),!(void 0!==n&amp;&amp;(t.exports=n))},function(t,e,r){var i,n;i=[r(2)],n=function(t){function e(r){if(e.is(r,&quot;function&quot;))return w?r():t.on(&quot;raphael.DOMload&quot;,r);if(e.is(r,Q))return e._engine.create[z](e,r.splice(0,3+e.is(r[0],$))).add(r);var i=Array.prototype.slice.call(arguments,0);if(e.is(i[i.length-1],&quot;function&quot;)){var n=i.pop();return w?n.call(e._engine.create[z](e,i)):t.on(&quot;raphael.DOMload&quot;,function(){n.call(e._engine.create[z](e,i))})}return e._engine.create[z](e,arguments)}function r(t){if(&quot;function&quot;==typeof t||Object(t)!==t)return t;var e=new t.constructor;for(var i in t)t[T](i)&amp;&amp;(e[i]=r(t[i]));return e}function i(t,e){for(var r=0,i=t.length;i&gt;r;r++)if(t[r]===e)return t.push(t.splice(r,1)[0])}function n(t,e,r){function n(){var a=Array.prototype.slice.call(arguments,0),s=a.join(&quot;␀&quot;),o=n.cache=n.cache||{},l=n.count=n.count||[];return o[T](s)?(i(l,s),r?r(o[s]):o[s]):(l.length&gt;=1e3&amp;&amp;delete o[l.shift()],l.push(s),o[s]=t[z](e,a),r?r(o[s]):o[s])}return n}function a(){return this.hex}function s(t,e){for(var r=[],i=0,n=t.length;n-2*!e&gt;i;i+=2){var a=[{x:+t[i-2],y:+t[i-1]},{x:+t[i],y:+t[i+1]},{x:+t[i+2],y:+t[i+3]},{x:+t[i+4],y:+t[i+5]}];e?i?n-4==i?a[3]={x:+t[0],y:+t[1]}:n-2==i&amp;&amp;(a[2]={x:+t[0],y:+t[1]},a[3]={x:+t[2],y:+t[3]}):a[0]={x:+t[n-2],y:+t[n-1]}:n-4==i?a[3]=a[2]:i||(a[0]={x:+t[i],y:+t[i+1]}),r.push([&quot;C&quot;,(-a[0].x+6*a[1].x+a[2].x)/6,(-a[0].y+6*a[1].y+a[2].y)/6,(a[1].x+6*a[2].x-a[3].x)/6,(a[1].y+6*a[2].y-a[3].y)/6,a[2].x,a[2].y])}return r}function o(t,e,r,i,n){var a=-3*e+9*r-9*i+3*n,s=t*a+6*e-12*r+6*i;return t*s-3*e+3*r}function l(t,e,r,i,n,a,s,l,h){null==h&amp;&amp;(h=1),h=h&gt;1?1:0&gt;h?0:h;for(var u=h/2,c=12,f=[-.1252,.1252,-.3678,.3678,-.5873,.5873,-.7699,.7699,-.9041,.9041,-.9816,.9816],p=[.2491,.2491,.2335,.2335,.2032,.2032,.1601,.1601,.1069,.1069,.0472,.0472],d=0,g=0;c&gt;g;g++){var x=u*f[g]+u,v=o(x,t,r,n,s),y=o(x,e,i,a,l),m=v*v+y*y;d+=p[g]*Y.sqrt(m)}return u*d}function h(t,e,r,i,n,a,s,o,h){if(!(0&gt;h||l(t,e,r,i,n,a,s,o)&lt;h)){var u=1,c=u/2,f=u-c,p,d=.01;for(p=l(t,e,r,i,n,a,s,o,f);H(p-h)&gt;d;)c/=2,f+=(h&gt;p?1:-1)*c,p=l(t,e,r,i,n,a,s,o,f);return f}}function u(t,e,r,i,n,a,s,o){if(!(W(t,r)&lt;G(n,s)||G(t,r)&gt;W(n,s)||W(e,i)&lt;G(a,o)||G(e,i)&gt;W(a,o))){var l=(t*i-e*r)*(n-s)-(t-r)*(n*o-a*s),h=(t*i-e*r)*(a-o)-(e-i)*(n*o-a*s),u=(t-r)*(a-o)-(e-i)*(n-s);if(u){var c=l/u,f=h/u,p=+c.toFixed(2),d=+f.toFixed(2);if(!(p&lt;+G(t,r).toFixed(2)||p&gt;+W(t,r).toFixed(2)||p&lt;+G(n,s).toFixed(2)||p&gt;+W(n,s).toFixed(2)||d&lt;+G(e,i).toFixed(2)||d&gt;+W(e,i).toFixed(2)||d&lt;+G(a,o).toFixed(2)||d&gt;+W(a,o).toFixed(2)))return{x:c,y:f}}}}function c(t,e){return p(t,e)}function f(t,e){return p(t,e,1)}function p(t,r,i){var n=e.bezierBBox(t),a=e.bezierBBox(r);if(!e.isBBoxIntersect(n,a))return i?0:[];for(var s=l.apply(0,t),o=l.apply(0,r),h=W(~~(s/5),1),c=W(~~(o/5),1),f=[],p=[],d={},g=i?0:[],x=0;h+1&gt;x;x++){var v=e.findDotsAtSegment.apply(e,t.concat(x/h));f.push({x:v.x,y:v.y,t:x/h})}for(x=0;c+1&gt;x;x++)v=e.findDotsAtSegment.apply(e,r.concat(x/c)),p.push({x:v.x,y:v.y,t:x/c});for(x=0;h&gt;x;x++)for(var y=0;c&gt;y;y++){var m=f[x],b=f[x+1],_=p[y],w=p[y+1],k=H(b.x-m.x)&lt;.001?&quot;y&quot;:&quot;x&quot;,B=H(w.x-_.x)&lt;.001?&quot;y&quot;:&quot;x&quot;,C=u(m.x,m.y,b.x,b.y,_.x,_.y,w.x,w.y);if(C){if(d[C.x.toFixed(4)]==C.y.toFixed(4))continue;d[C.x.toFixed(4)]=C.y.toFixed(4);var S=m.t+H((C[k]-m[k])/(b[k]-m[k]))*(b.t-m.t),T=_.t+H((C[B]-_[B])/(w[B]-_[B]))*(w.t-_.t);S&gt;=0&amp;&amp;1.001&gt;=S&amp;&amp;T&gt;=0&amp;&amp;1.001&gt;=T&amp;&amp;(i?g++:g.push({x:C.x,y:C.y,t1:G(S,1),t2:G(T,1)}))}}return g}function d(t,r,i){t=e._path2curve(t),r=e._path2curve(r);for(var n,a,s,o,l,h,u,c,f,d,g=i?0:[],x=0,v=t.length;v&gt;x;x++){var y=t[x];if(&quot;M&quot;==y[0])n=l=y[1],a=h=y[2];else{&quot;C&quot;==y[0]?(f=[n,a].concat(y.slice(1)),n=f[6],a=f[7]):(f=[n,a,n,a,l,h,l,h],n=l,a=h);for(var m=0,b=r.length;b&gt;m;m++){var _=r[m];if(&quot;M&quot;==_[0])s=u=_[1],o=c=_[2];else{&quot;C&quot;==_[0]?(d=[s,o].concat(_.slice(1)),s=d[6],o=d[7]):(d=[s,o,s,o,u,c,u,c],s=u,o=c);var w=p(f,d,i);if(i)g+=w;else{for(var k=0,B=w.length;B&gt;k;k++)w[k].segment1=x,w[k].segment2=m,w[k].bez1=f,w[k].bez2=d;g=g.concat(w)}}}}}return g}function g(t,e,r,i,n,a){null!=t?(this.a=+t,this.b=+e,this.c=+r,this.d=+i,this.e=+n,this.f=+a):(this.a=1,this.b=0,this.c=0,this.d=1,this.e=0,this.f=0)}function x(){return this.x+I+this.y}function v(){return this.x+I+this.y+I+this.width+&quot; × &quot;+this.height}function y(t,e,r,i,n,a){function s(t){return((c*t+u)*t+h)*t}function o(t,e){var r=l(t,e);return((d*r+p)*r+f)*r}function l(t,e){var r,i,n,a,o,l;for(n=t,l=0;8&gt;l;l++){if(a=s(n)-t,H(a)&lt;e)return n;if(o=(3*c*n+2*u)*n+h,H(o)&lt;1e-6)break;n-=a/o}if(r=0,i=1,n=t,r&gt;n)return r;if(n&gt;i)return i;for(;i&gt;r;){if(a=s(n),H(a-t)&lt;e)return n;t&gt;a?r=n:i=n,n=(i-r)/2+r}return n}var h=3*e,u=3*(i-e)-h,c=1-h-u,f=3*r,p=3*(n-r)-f,d=1-f-p;return o(t,1/(200*a))}function m(t,e){var r=[],i={};if(this.ms=e,this.times=1,t){for(var n in t)t[T](n)&amp;&amp;(i[ht(n)]=t[n],r.push(ht(n)));r.sort(Bt)}this.anim=i,this.top=r[r.length-1],this.percents=r}function b(r,i,n,a,s,o){n=ht(n);var l,h,u,c=[],f,p,d,x=r.ms,v={},m={},b={};if(a)for(w=0,B=Ee.length;B&gt;w;w++){var _=Ee[w];if(_.el.id==i.id&amp;&amp;_.anim==r){_.percent!=n?(Ee.splice(w,1),u=1):h=_,i.attr(_.totalOrigin);break}}else a=+m;for(var w=0,B=r.percents.length;B&gt;w;w++){if(r.percents[w]==n||r.percents[w]&gt;a*r.top){n=r.percents[w],p=r.percents[w-1]||0,x=x/r.top*(n-p),f=r.percents[w+1],l=r.anim[n];break}a&amp;&amp;i.attr(r.anim[r.percents[w]])}if(l){if(h)h.initstatus=a,h.start=new Date-h.ms*a;else{for(var C in l)if(l[T](C)&amp;&amp;(pt[T](C)||i.paper.customAttributes[T](C)))switch(v[C]=i.attr(C),null==v[C]&amp;&amp;(v[C]=ft[C]),m[C]=l[C],pt[C]){case $:b[C]=(m[C]-v[C])/x;break;case&quot;colour&quot;:v[C]=e.getRGB(v[C]);var S=e.getRGB(m[C]);b[C]={r:(S.r-v[C].r)/x,g:(S.g-v[C].g)/x,b:(S.b-v[C].b)/x};break;case&quot;path&quot;:var A=Qt(v[C],m[C]),E=A[1];for(v[C]=A[0],b[C]=[],w=0,B=v[C].length;B&gt;w;w++){b[C][w]=[0];for(var M=1,N=v[C][w].length;N&gt;M;M++)b[C][w][M]=(E[w][M]-v[C][w][M])/x}break;case&quot;transform&quot;:var L=i._,z=le(L[C],m[C]);if(z)for(v[C]=z.from,m[C]=z.to,b[C]=[],b[C].real=!0,w=0,B=v[C].length;B&gt;w;w++)for(b[C][w]=[v[C][w][0]],M=1,N=v[C][w].length;N&gt;M;M++)b[C][w][M]=(m[C][w][M]-v[C][w][M])/x;else{var F=i.matrix||new g,R={_:{transform:L.transform},getBBox:function(){return i.getBBox(1)}};v[C]=[F.a,F.b,F.c,F.d,F.e,F.f],se(R,m[C]),m[C]=R._.transform,b[C]=[(R.matrix.a-F.a)/x,(R.matrix.b-F.b)/x,(R.matrix.c-F.c)/x,(R.matrix.d-F.d)/x,(R.matrix.e-F.e)/x,(R.matrix.f-F.f)/x]}break;case&quot;csv&quot;:var I=j(l[C])[q](k),D=j(v[C])[q](k);if(&quot;clip-rect&quot;==C)for(v[C]=D,b[C]=[],w=D.length;w--;)b[C][w]=(I[w]-v[C][w])/x;m[C]=I;break;default:for(I=[][P](l[C]),D=[][P](v[C]),b[C]=[],w=i.paper.customAttributes[C].length;w--;)b[C][w]=((I[w]||0)-(D[w]||0))/x}var V=l.easing,O=e.easing_formulas[V];if(!O)if(O=j(V).match(st),O&amp;&amp;5==O.length){var Y=O;O=function(t){return y(t,+Y[1],+Y[2],+Y[3],+Y[4],x)}}else O=St;if(d=l.start||r.start||+new Date,_={anim:r,percent:n,timestamp:d,start:d+(r.del||0),status:0,initstatus:a||0,stop:!1,ms:x,easing:O,from:v,diff:b,to:m,el:i,callback:l.callback,prev:p,next:f,repeat:o||r.times,origin:i.attr(),totalOrigin:s},Ee.push(_),a&amp;&amp;!h&amp;&amp;!u&amp;&amp;(_.stop=!0,_.start=new Date-x*a,1==Ee.length))return Ne();u&amp;&amp;(_.start=new Date-_.ms*a),1==Ee.length&amp;&amp;Me(Ne)}t(&quot;raphael.anim.start.&quot;+i.id,i,r)}}function _(t){for(var e=0;e&lt;Ee.length;e++)Ee[e].el.paper==t&amp;&amp;Ee.splice(e--,1)}e.version=&quot;2.2.0&quot;,e.eve=t;var w,k=/[, ]+/,B={circle:1,rect:1,path:1,ellipse:1,text:1,image:1},C=/\{(\d+)\}/g,S=&quot;prototype&quot;,T=&quot;hasOwnProperty&quot;,A={doc:document,win:window},E={was:Object.prototype[T].call(A.win,&quot;Raphael&quot;),is:A.win.Raphael},M=function(){this.ca=this.customAttributes={}},N,L=&quot;appendChild&quot;,z=&quot;apply&quot;,P=&quot;concat&quot;,F=true,R=&quot;&quot;,I=&quot; &quot;,j=String,q=&quot;split&quot;,D=&quot;click dblclick mousedown mousemove mouseout mouseover mouseup touchstart touchmove touchend touchcancel&quot;[q](I),V={mousedown:&quot;touchstart&quot;,mousemove:&quot;touchmove&quot;,mouseup:&quot;touchend&quot;},O=j.prototype.toLowerCase,Y=Math,W=Y.max,G=Y.min,H=Y.abs,X=Y.pow,U=Y.PI,$=&quot;number&quot;,Z=&quot;string&quot;,Q=&quot;array&quot;,J=&quot;toString&quot;,K=&quot;fill&quot;,tt=Object.prototype.toString,et={},rt=&quot;push&quot;,it=e._ISURL=/^url\(['&quot;]?(.+?)['&quot;]?\)$/i,nt=/^\s*((#[a-f\d]{6})|(#[a-f\d]{3})|rgba?\(\s*([\d\.]+%?\s*,\s*[\d\.]+%?\s*,\s*[\d\.]+%?(?:\s*,\s*[\d\.]+%?)?)\s*\)|hsba?\(\s*([\d\.]+(?:deg|\xb0|%)?\s*,\s*[\d\.]+%?\s*,\s*[\d\.]+(?:%?\s*,\s*[\d\.]+)?)%?\s*\)|hsla?\(\s*([\d\.]+(?:deg|\xb0|%)?\s*,\s*[\d\.]+%?\s*,\s*[\d\.]+(?:%?\s*,\s*[\d\.]+)?)%?\s*\))\s*$/i,at={NaN:1,Infinity:1,&quot;-Infinity&quot;:1},st=/^(?:cubic-)?bezier\(([^,]+),([^,]+),([^,]+),([^\)]+)\)/,ot=Y.round,lt=&quot;setAttribute&quot;,ht=parseFloat,ut=parseInt,ct=j.prototype.toUpperCase,ft=e._availableAttrs={&quot;arrow-end&quot;:&quot;none&quot;,&quot;arrow-start&quot;:&quot;none&quot;,blur:0,&quot;clip-rect&quot;:&quot;0 0 1e9 1e9&quot;,cursor:&quot;default&quot;,cx:0,cy:0,fill:&quot;#fff&quot;,&quot;fill-opacity&quot;:1,font:'10px &quot;Arial&quot;',&quot;font-family&quot;:'&quot;Arial&quot;',&quot;font-size&quot;:&quot;10&quot;,&quot;font-style&quot;:&quot;normal&quot;,&quot;font-weight&quot;:400,gradient:0,height:0,href:&quot;http://raphaeljs.com/&quot;,&quot;letter-spacing&quot;:0,opacity:1,path:&quot;M0,0&quot;,r:0,rx:0,ry:0,src:&quot;&quot;,stroke:&quot;#000&quot;,&quot;stroke-dasharray&quot;:&quot;&quot;,&quot;stroke-linecap&quot;:&quot;butt&quot;,&quot;stroke-linejoin&quot;:&quot;butt&quot;,&quot;stroke-miterlimit&quot;:0,&quot;stroke-opacity&quot;:1,&quot;stroke-width&quot;:1,target:&quot;_blank&quot;,&quot;text-anchor&quot;:&quot;middle&quot;,title:&quot;Raphael&quot;,transform:&quot;&quot;,width:0,x:0,y:0,&quot;class&quot;:&quot;&quot;},pt=e._availableAnimAttrs={blur:$,&quot;clip-rect&quot;:&quot;csv&quot;,cx:$,cy:$,fill:&quot;colour&quot;,&quot;fill-opacity&quot;:$,&quot;font-size&quot;:$,height:$,opacity:$,path:&quot;path&quot;,r:$,rx:$,ry:$,stroke:&quot;colour&quot;,&quot;stroke-opacity&quot;:$,&quot;stroke-width&quot;:$,transform:&quot;transform&quot;,width:$,x:$,y:$},dt=/[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029]/g,gt=/[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029]*,[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029]*/,xt={hs:1,rg:1},vt=/,?([achlmqrstvxz]),?/gi,yt=/([achlmrqstvz])[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029,]*((-?\d*\.?\d*(?:e[\-+]?\d+)?[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029]*,?[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029]*)+)/gi,mt=/([rstm])[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029,]*((-?\d*\.?\d*(?:e[\-+]?\d+)?[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029]*,?[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029]*)+)/gi,bt=/(-?\d*\.?\d*(?:e[\-+]?\d+)?)[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029]*,?[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029]*/gi,_t=e._radial_gradient=/^r(?:\(([^,]+?)[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029]*,[\x09\x0a\x0b\x0c\x0d\x20\xa0\u1680\u180e\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000\u2028\u2029]*([^\)]+?)\))?/,wt={},kt=function(t,e){return t.key-e.key},Bt=function(t,e){return ht(t)-ht(e)},Ct=function(){},St=function(t){return t},Tt=e._rectPath=function(t,e,r,i,n){return n?[[&quot;M&quot;,t+n,e],[&quot;l&quot;,r-2*n,0],[&quot;a&quot;,n,n,0,0,1,n,n],[&quot;l&quot;,0,i-2*n],[&quot;a&quot;,n,n,0,0,1,-n,n],[&quot;l&quot;,2*n-r,0],[&quot;a&quot;,n,n,0,0,1,-n,-n],[&quot;l&quot;,0,2*n-i],[&quot;a&quot;,n,n,0,0,1,n,-n],[&quot;z&quot;]]:[[&quot;M&quot;,t,e],[&quot;l&quot;,r,0],[&quot;l&quot;,0,i],[&quot;l&quot;,-r,0],[&quot;z&quot;]]},At=function(t,e,r,i){return null==i&amp;&amp;(i=r),[[&quot;M&quot;,t,e],[&quot;m&quot;,0,-i],[&quot;a&quot;,r,i,0,1,1,0,2*i],[&quot;a&quot;,r,i,0,1,1,0,-2*i],[&quot;z&quot;]]},Et=e._getPath={path:function(t){return t.attr(&quot;path&quot;)},circle:function(t){var e=t.attrs;return At(e.cx,e.cy,e.r)},ellipse:function(t){var e=t.attrs;return At(e.cx,e.cy,e.rx,e.ry)},rect:function(t){var e=t.attrs;return Tt(e.x,e.y,e.width,e.height,e.r)},image:function(t){var e=t.attrs;return Tt(e.x,e.y,e.width,e.height)},text:function(t){var e=t._getBBox();return Tt(e.x,e.y,e.width,e.height)},set:function(t){var e=t._getBBox();return Tt(e.x,e.y,e.width,e.height)}},Mt=e.mapPath=function(t,e){if(!e)return t;var r,i,n,a,s,o,l;for(t=Qt(t),n=0,s=t.length;s&gt;n;n++)for(l=t[n],a=1,o=l.length;o&gt;a;a+=2)r=e.x(l[a],l[a+1]),i=e.y(l[a],l[a+1]),l[a]=r,l[a+1]=i;return t};if(e._g=A,e.type=A.win.SVGAngle||A.doc.implementation.hasFeature(&quot;http://www.w3.org/TR/SVG11/feature#BasicStructure&quot;,&quot;1.1&quot;)?&quot;SVG&quot;:&quot;VML&quot;,&quot;VML&quot;==e.type){var Nt=A.doc.createElement(&quot;div&quot;),Lt;if(Nt.innerHTML='&lt;v:shape adj=&quot;1&quot;/&gt;',Lt=Nt.firstChild,Lt.style.behavior=&quot;url(#default#VML)&quot;,!Lt||&quot;object&quot;!=typeof Lt.adj)return e.type=R;Nt=null}e.svg=!(e.vml=&quot;VML&quot;==e.type),e._Paper=M,e.fn=N=M.prototype=e.prototype,e._id=0,e.is=function(t,e){return e=O.call(e),&quot;finite&quot;==e?!at[T](+t):&quot;array&quot;==e?t instanceof Array:&quot;null&quot;==e&amp;&amp;null===t||e==typeof t&amp;&amp;null!==t||&quot;object&quot;==e&amp;&amp;t===Object(t)||&quot;array&quot;==e&amp;&amp;Array.isArray&amp;&amp;Array.isArray(t)||tt.call(t).slice(8,-1).toLowerCase()==e},e.angle=function(t,r,i,n,a,s){if(null==a){var o=t-i,l=r-n;return o||l?(180+180*Y.atan2(-l,-o)/U+360)%360:0}return e.angle(t,r,a,s)-e.angle(i,n,a,s)},e.rad=function(t){return t%360*U/180},e.deg=function(t){return Math.round(180*t/U%360*1e3)/1e3},e.snapTo=function(t,r,i){if(i=e.is(i,&quot;finite&quot;)?i:10,e.is(t,Q)){for(var n=t.length;n--;)if(H(t[n]-r)&lt;=i)return t[n]}else{t=+t;var a=r%t;if(i&gt;a)return r-a;if(a&gt;t-i)return r-a+t}return r};var zt=e.createUUID=function(t,e){return function(){return&quot;xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx&quot;.replace(t,e).toUpperCase()}}(/[xy]/g,function(t){var e=16*Y.random()|0,r=&quot;x&quot;==t?e:3&amp;e|8;return r.toString(16)});e.setWindow=function(r){t(&quot;raphael.setWindow&quot;,e,A.win,r),A.win=r,A.doc=A.win.document,e._engine.initWin&amp;&amp;e._engine.initWin(A.win)};var Pt=function(t){if(e.vml){var r=/^\s+|\s+$/g,i;try{var a=new ActiveXObject(&quot;htmlfile&quot;);a.write(&quot;&lt;body&gt;&quot;),a.close(),i=a.body}catch(s){i=createPopup().document.body}var o=i.createTextRange();Pt=n(function(t){try{i.style.color=j(t).replace(r,R);var e=o.queryCommandValue(&quot;ForeColor&quot;);return e=(255&amp;e)&lt;&lt;16|65280&amp;e|(16711680&amp;e)&gt;&gt;&gt;16,&quot;#&quot;+(&quot;000000&quot;+e.toString(16)).slice(-6)}catch(n){return&quot;none&quot;}})}else{var l=A.doc.createElement(&quot;i&quot;);l.title=&quot;Raphaël Colour Picker&quot;,l.style.display=&quot;none&quot;,A.doc.body.appendChild(l),Pt=n(function(t){return l.style.color=t,A.doc.defaultView.getComputedStyle(l,R).getPropertyValue(&quot;color&quot;)})}return Pt(t)},Ft=function(){return&quot;hsb(&quot;+[this.h,this.s,this.b]+&quot;)&quot;},Rt=function(){return&quot;hsl(&quot;+[this.h,this.s,this.l]+&quot;)&quot;},It=function(){return this.hex},jt=function(t,r,i){if(null==r&amp;&amp;e.is(t,&quot;object&quot;)&amp;&amp;&quot;r&quot;in t&amp;&amp;&quot;g&quot;in t&amp;&amp;&quot;b&quot;in t&amp;&amp;(i=t.b,r=t.g,t=t.r),null==r&amp;&amp;e.is(t,Z)){var n=e.getRGB(t);t=n.r,r=n.g,i=n.b}return(t&gt;1||r&gt;1||i&gt;1)&amp;&amp;(t/=255,r/=255,i/=255),[t,r,i]},qt=function(t,r,i,n){t*=255,r*=255,i*=255;var a={r:t,g:r,b:i,hex:e.rgb(t,r,i),toString:It};return e.is(n,&quot;finite&quot;)&amp;&amp;(a.opacity=n),a};e.color=function(t){var r;return e.is(t,&quot;object&quot;)&amp;&amp;&quot;h&quot;in t&amp;&amp;&quot;s&quot;in t&amp;&amp;&quot;b&quot;in t?(r=e.hsb2rgb(t),t.r=r.r,t.g=r.g,t.b=r.b,t.hex=r.hex):e.is(t,&quot;object&quot;)&amp;&amp;&quot;h&quot;in t&amp;&amp;&quot;s&quot;in t&amp;&amp;&quot;l&quot;in t?(r=e.hsl2rgb(t),t.r=r.r,t.g=r.g,t.b=r.b,t.hex=r.hex):(e.is(t,&quot;string&quot;)&amp;&amp;(t=e.getRGB(t)),e.is(t,&quot;object&quot;)&amp;&amp;&quot;r&quot;in t&amp;&amp;&quot;g&quot;in t&amp;&amp;&quot;b&quot;in t?(r=e.rgb2hsl(t),t.h=r.h,t.s=r.s,t.l=r.l,r=e.rgb2hsb(t),t.v=r.b):(t={hex:&quot;none&quot;},t.r=t.g=t.b=t.h=t.s=t.v=t.l=-1)),t.toString=It,t},e.hsb2rgb=function(t,e,r,i){this.is(t,&quot;object&quot;)&amp;&amp;&quot;h&quot;in t&amp;&amp;&quot;s&quot;in t&amp;&amp;&quot;b&quot;in t&amp;&amp;(r=t.b,e=t.s,i=t.o,t=t.h),t*=360;var n,a,s,o,l;return t=t%360/60,l=r*e,o=l*(1-H(t%2-1)),n=a=s=r-l,t=~~t,n+=[l,o,0,0,o,l][t],a+=[o,l,l,o,0,0][t],s+=[0,0,o,l,l,o][t],qt(n,a,s,i)},e.hsl2rgb=function(t,e,r,i){this.is(t,&quot;object&quot;)&amp;&amp;&quot;h&quot;in t&amp;&amp;&quot;s&quot;in t&amp;&amp;&quot;l&quot;in t&amp;&amp;(r=t.l,e=t.s,t=t.h),(t&gt;1||e&gt;1||r&gt;1)&amp;&amp;(t/=360,e/=100,r/=100),t*=360;var n,a,s,o,l;return t=t%360/60,l=2*e*(.5&gt;r?r:1-r),o=l*(1-H(t%2-1)),n=a=s=r-l/2,t=~~t,n+=[l,o,0,0,o,l][t],a+=[o,l,l,o,0,0][t],s+=[0,0,o,l,l,o][t],qt(n,a,s,i)},e.rgb2hsb=function(t,e,r){r=jt(t,e,r),t=r[0],e=r[1],r=r[2];var i,n,a,s;return a=W(t,e,r),s=a-G(t,e,r),i=0==s?null:a==t?(e-r)/s:a==e?(r-t)/s+2:(t-e)/s+4,i=(i+360)%6*60/360,n=0==s?0:s/a,{h:i,s:n,b:a,toString:Ft}},e.rgb2hsl=function(t,e,r){r=jt(t,e,r),t=r[0],e=r[1],r=r[2];var i,n,a,s,o,l;return s=W(t,e,r),o=G(t,e,r),l=s-o,i=0==l?null:s==t?(e-r)/l:s==e?(r-t)/l+2:(t-e)/l+4,i=(i+360)%6*60/360,a=(s+o)/2,n=0==l?0:.5&gt;a?l/(2*a):l/(2-2*a),{h:i,s:n,l:a,toString:Rt}},e._path2string=function(){return this.join(&quot;,&quot;).replace(vt,&quot;$1&quot;)};var Dt=e._preload=function(t,e){var r=A.doc.createElement(&quot;img&quot;);r.style.cssText=&quot;position:absolute;left:-9999em;top:-9999em&quot;,r.onload=function(){e.call(this),this.onload=null,A.doc.body.removeChild(this)},r.onerror=function(){A.doc.body.removeChild(this)},A.doc.body.appendChild(r),r.src=t};e.getRGB=n(function(t){if(!t||(t=j(t)).indexOf(&quot;-&quot;)+1)return{r:-1,g:-1,b:-1,hex:&quot;none&quot;,error:1,toString:a};if(&quot;none&quot;==t)return{r:-1,g:-1,b:-1,hex:&quot;none&quot;,toString:a};!(xt[T](t.toLowerCase().substring(0,2))||&quot;#&quot;==t.charAt())&amp;&amp;(t=Pt(t));var r,i,n,s,o,l,h,u=t.match(nt);return u?(u[2]&amp;&amp;(s=ut(u[2].substring(5),16),n=ut(u[2].substring(3,5),16),i=ut(u[2].substring(1,3),16)),u[3]&amp;&amp;(s=ut((l=u[3].charAt(3))+l,16),n=ut((l=u[3].charAt(2))+l,16),i=ut((l=u[3].charAt(1))+l,16)),u[4]&amp;&amp;(h=u[4][q](gt),i=ht(h[0]),&quot;%&quot;==h[0].slice(-1)&amp;&amp;(i*=2.55),n=ht(h[1]),&quot;%&quot;==h[1].slice(-1)&amp;&amp;(n*=2.55),s=ht(h[2]),&quot;%&quot;==h[2].slice(-1)&amp;&amp;(s*=2.55),&quot;rgba&quot;==u[1].toLowerCase().slice(0,4)&amp;&amp;(o=ht(h[3])),h[3]&amp;&amp;&quot;%&quot;==h[3].slice(-1)&amp;&amp;(o/=100)),u[5]?(h=u[5][q](gt),i=ht(h[0]),&quot;%&quot;==h[0].slice(-1)&amp;&amp;(i*=2.55),n=ht(h[1]),&quot;%&quot;==h[1].slice(-1)&amp;&amp;(n*=2.55),s=ht(h[2]),&quot;%&quot;==h[2].slice(-1)&amp;&amp;(s*=2.55),(&quot;deg&quot;==h[0].slice(-3)||&quot;°&quot;==h[0].slice(-1))&amp;&amp;(i/=360),&quot;hsba&quot;==u[1].toLowerCase().slice(0,4)&amp;&amp;(o=ht(h[3])),h[3]&amp;&amp;&quot;%&quot;==h[3].slice(-1)&amp;&amp;(o/=100),e.hsb2rgb(i,n,s,o)):u[6]?(h=u[6][q](gt),i=ht(h[0]),&quot;%&quot;==h[0].slice(-1)&amp;&amp;(i*=2.55),n=ht(h[1]),&quot;%&quot;==h[1].slice(-1)&amp;&amp;(n*=2.55),s=ht(h[2]),&quot;%&quot;==h[2].slice(-1)&amp;&amp;(s*=2.55),(&quot;deg&quot;==h[0].slice(-3)||&quot;°&quot;==h[0].slice(-1))&amp;&amp;(i/=360),&quot;hsla&quot;==u[1].toLowerCase().slice(0,4)&amp;&amp;(o=ht(h[3])),h[3]&amp;&amp;&quot;%&quot;==h[3].slice(-1)&amp;&amp;(o/=100),e.hsl2rgb(i,n,s,o)):(u={r:i,g:n,b:s,toString:a},u.hex=&quot;#&quot;+(16777216|s|n&lt;&lt;8|i&lt;&lt;16).toString(16).slice(1),e.is(o,&quot;finite&quot;)&amp;&amp;(u.opacity=o),u)):{r:-1,g:-1,b:-1,hex:&quot;none&quot;,error:1,toString:a}},e),e.hsb=n(function(t,r,i){return e.hsb2rgb(t,r,i).hex}),e.hsl=n(function(t,r,i){return e.hsl2rgb(t,r,i).hex}),e.rgb=n(function(t,e,r){function i(t){return t+.5|0}return&quot;#&quot;+(16777216|i(r)|i(e)&lt;&lt;8|i(t)&lt;&lt;16).toString(16).slice(1)}),e.getColor=function(t){var e=this.getColor.start=this.getColor.start||{h:0,s:1,b:t||.75},r=this.hsb2rgb(e.h,e.s,e.b);return e.h+=.075,e.h&gt;1&amp;&amp;(e.h=0,e.s-=.2,e.s&lt;=0&amp;&amp;(this.getColor.start={h:0,s:1,b:e.b})),r.hex},e.getColor.reset=function(){delete this.start},e.parsePathString=function(t){if(!t)return null;var r=Vt(t);if(r.arr)return Yt(r.arr);var i={a:7,c:6,h:1,l:2,m:2,r:4,q:4,s:4,t:2,v:1,z:0},n=[];return e.is(t,Q)&amp;&amp;e.is(t[0],Q)&amp;&amp;(n=Yt(t)),n.length||j(t).replace(yt,function(t,e,r){var a=[],s=e.toLowerCase();if(r.replace(bt,function(t,e){e&amp;&amp;a.push(+e)}),&quot;m&quot;==s&amp;&amp;a.length&gt;2&amp;&amp;(n.push([e][P](a.splice(0,2))),s=&quot;l&quot;,e=&quot;m&quot;==e?&quot;l&quot;:&quot;L&quot;),&quot;r&quot;==s)n.push([e][P](a));else for(;a.length&gt;=i[s]&amp;&amp;(n.push([e][P](a.splice(0,i[s]))),i[s]););}),n.toString=e._path2string,r.arr=Yt(n),n},e.parseTransformString=n(function(t){if(!t)return null;var r={r:3,s:4,t:2,m:6},i=[];return e.is(t,Q)&amp;&amp;e.is(t[0],Q)&amp;&amp;(i=Yt(t)),i.length||j(t).replace(mt,function(t,e,r){var n=[],a=O.call(e);r.replace(bt,function(t,e){e&amp;&amp;n.push(+e)}),i.push([e][P](n))}),i.toString=e._path2string,i});var Vt=function(t){var e=Vt.ps=Vt.ps||{};return e[t]?e[t].sleep=100:e[t]={sleep:100},setTimeout(function(){for(var r in e)e[T](r)&amp;&amp;r!=t&amp;&amp;(e[r].sleep--,!e[r].sleep&amp;&amp;delete e[r])}),e[t]};e.findDotsAtSegment=function(t,e,r,i,n,a,s,o,l){var h=1-l,u=X(h,3),c=X(h,2),f=l*l,p=f*l,d=u*t+3*c*l*r+3*h*l*l*n+p*s,g=u*e+3*c*l*i+3*h*l*l*a+p*o,x=t+2*l*(r-t)+f*(n-2*r+t),v=e+2*l*(i-e)+f*(a-2*i+e),y=r+2*l*(n-r)+f*(s-2*n+r),m=i+2*l*(a-i)+f*(o-2*a+i),b=h*t+l*r,_=h*e+l*i,w=h*n+l*s,k=h*a+l*o,B=90-180*Y.atan2(x-y,v-m)/U;return(x&gt;y||m&gt;v)&amp;&amp;(B+=180),{x:d,y:g,m:{x:x,y:v},n:{x:y,y:m},start:{x:b,y:_},end:{x:w,y:k},alpha:B}},e.bezierBBox=function(t,r,i,n,a,s,o,l){e.is(t,&quot;array&quot;)||(t=[t,r,i,n,a,s,o,l]);var h=Zt.apply(null,t);return{x:h.min.x,y:h.min.y,x2:h.max.x,y2:h.max.y,width:h.max.x-h.min.x,height:h.max.y-h.min.y}},e.isPointInsideBBox=function(t,e,r){return e&gt;=t.x&amp;&amp;e&lt;=t.x2&amp;&amp;r&gt;=t.y&amp;&amp;r&lt;=t.y2},e.isBBoxIntersect=function(t,r){var i=e.isPointInsideBBox;return i(r,t.x,t.y)||i(r,t.x2,t.y)||i(r,t.x,t.y2)||i(r,t.x2,t.y2)||i(t,r.x,r.y)||i(t,r.x2,r.y)||i(t,r.x,r.y2)||i(t,r.x2,r.y2)||(t.x&lt;r.x2&amp;&amp;t.x&gt;r.x||r.x&lt;t.x2&amp;&amp;r.x&gt;t.x)&amp;&amp;(t.y&lt;r.y2&amp;&amp;t.y&gt;r.y||r.y&lt;t.y2&amp;&amp;r.y&gt;t.y)},e.pathIntersection=function(t,e){return d(t,e)},e.pathIntersectionNumber=function(t,e){return d(t,e,1)},e.isPointInsidePath=function(t,r,i){var n=e.pathBBox(t);return e.isPointInsideBBox(n,r,i)&amp;&amp;d(t,[[&quot;M&quot;,r,i],[&quot;H&quot;,n.x2+10]],1)%2==1},e._removedFactory=function(e){return function(){t(&quot;raphael.log&quot;,null,&quot;Raphaël: you are calling to method “&quot;+e+&quot;” of removed object&quot;,e)}};var Ot=e.pathBBox=function(t){var e=Vt(t);if(e.bbox)return r(e.bbox);if(!t)return{x:0,y:0,width:0,height:0,x2:0,y2:0};t=Qt(t);for(var i=0,n=0,a=[],s=[],o,l=0,h=t.length;h&gt;l;l++)if(o=t[l],&quot;M&quot;==o[0])i=o[1],n=o[2],a.push(i),s.push(n);else{var u=Zt(i,n,o[1],o[2],o[3],o[4],o[5],o[6]);a=a[P](u.min.x,u.max.x),s=s[P](u.min.y,u.max.y),i=o[5],n=o[6]}var c=G[z](0,a),f=G[z](0,s),p=W[z](0,a),d=W[z](0,s),g=p-c,x=d-f,v={x:c,y:f,x2:p,y2:d,width:g,height:x,cx:c+g/2,cy:f+x/2};return e.bbox=r(v),v},Yt=function(t){var i=r(t);return i.toString=e._path2string,i},Wt=e._pathToRelative=function(t){var r=Vt(t);if(r.rel)return Yt(r.rel);e.is(t,Q)&amp;&amp;e.is(t&amp;&amp;t[0],Q)||(t=e.parsePathString(t));var i=[],n=0,a=0,s=0,o=0,l=0;&quot;M&quot;==t[0][0]&amp;&amp;(n=t[0][1],a=t[0][2],s=n,o=a,l++,i.push([&quot;M&quot;,n,a]));for(var h=l,u=t.length;u&gt;h;h++){var c=i[h]=[],f=t[h];if(f[0]!=O.call(f[0]))switch(c[0]=O.call(f[0]),c[0]){case&quot;a&quot;:c[1]=f[1],c[2]=f[2],c[3]=f[3],c[4]=f[4],c[5]=f[5],c[6]=+(f[6]-n).toFixed(3),c[7]=+(f[7]-a).toFixed(3);break;case&quot;v&quot;:c[1]=+(f[1]-a).toFixed(3);break;case&quot;m&quot;:s=f[1],o=f[2];default:for(var p=1,d=f.length;d&gt;p;p++)c[p]=+(f[p]-(p%2?n:a)).toFixed(3)}else{c=i[h]=[],&quot;m&quot;==f[0]&amp;&amp;(s=f[1]+n,o=f[2]+a);for(var g=0,x=f.length;x&gt;g;g++)i[h][g]=f[g]}var v=i[h].length;switch(i[h][0]){case&quot;z&quot;:n=s,a=o;break;case&quot;h&quot;:n+=+i[h][v-1];break;case&quot;v&quot;:a+=+i[h][v-1];break;default:n+=+i[h][v-2],a+=+i[h][v-1]}}return i.toString=e._path2string,r.rel=Yt(i),i},Gt=e._pathToAbsolute=function(t){var r=Vt(t);if(r.abs)return Yt(r.abs);if(e.is(t,Q)&amp;&amp;e.is(t&amp;&amp;t[0],Q)||(t=e.parsePathString(t)),!t||!t.length)return[[&quot;M&quot;,0,0]];var i=[],n=0,a=0,o=0,l=0,h=0;&quot;M&quot;==t[0][0]&amp;&amp;(n=+t[0][1],a=+t[0][2],o=n,l=a,h++,i[0]=[&quot;M&quot;,n,a]);for(var u=3==t.length&amp;&amp;&quot;M&quot;==t[0][0]&amp;&amp;&quot;R&quot;==t[1][0].toUpperCase()&amp;&amp;&quot;Z&quot;==t[2][0].toUpperCase(),c,f,p=h,d=t.length;d&gt;p;p++){if(i.push(c=[]),f=t[p],f[0]!=ct.call(f[0]))switch(c[0]=ct.call(f[0]),c[0]){case&quot;A&quot;:c[1]=f[1],c[2]=f[2],c[3]=f[3],c[4]=f[4],c[5]=f[5],c[6]=+(f[6]+n),c[7]=+(f[7]+a);break;case&quot;V&quot;:c[1]=+f[1]+a;break;case&quot;H&quot;:c[1]=+f[1]+n;break;case&quot;R&quot;:for(var g=[n,a][P](f.slice(1)),x=2,v=g.length;v&gt;x;x++)g[x]=+g[x]+n,g[++x]=+g[x]+a;i.pop(),i=i[P](s(g,u));break;case&quot;M&quot;:o=+f[1]+n,l=+f[2]+a;default:for(x=1,v=f.length;v&gt;x;x++)c[x]=+f[x]+(x%2?n:a)}else if(&quot;R&quot;==f[0])g=[n,a][P](f.slice(1)),i.pop(),i=i[P](s(g,u)),c=[&quot;R&quot;][P](f.slice(-2));else for(var y=0,m=f.length;m&gt;y;y++)c[y]=f[y];switch(c[0]){case&quot;Z&quot;:n=o,a=l;break;case&quot;H&quot;:n=c[1];break;case&quot;V&quot;:a=c[1];break;case&quot;M&quot;:o=c[c.length-2],l=c[c.length-1];default:n=c[c.length-2],a=c[c.length-1]}}return i.toString=e._path2string,r.abs=Yt(i),i},Ht=function(t,e,r,i){return[t,e,r,i,r,i]},Xt=function(t,e,r,i,n,a){var s=1/3,o=2/3;return[s*t+o*r,s*e+o*i,s*n+o*r,s*a+o*i,n,a]},Ut=function(t,e,r,i,a,s,o,l,h,u){var c=120*U/180,f=U/180*(+a||0),p=[],d,g=n(function(t,e,r){var i=t*Y.cos(r)-e*Y.sin(r),n=t*Y.sin(r)+e*Y.cos(r);return{x:i,y:n}});if(u)S=u[0],T=u[1],B=u[2],C=u[3];else{d=g(t,e,-f),t=d.x,e=d.y,d=g(l,h,-f),l=d.x,h=d.y;var x=Y.cos(U/180*a),v=Y.sin(U/180*a),y=(t-l)/2,m=(e-h)/2,b=y*y/(r*r)+m*m/(i*i);b&gt;1&amp;&amp;(b=Y.sqrt(b),r=b*r,i=b*i);var _=r*r,w=i*i,k=(s==o?-1:1)*Y.sqrt(H((_*w-_*m*m-w*y*y)/(_*m*m+w*y*y))),B=k*r*m/i+(t+l)/2,C=k*-i*y/r+(e+h)/2,S=Y.asin(((e-C)/i).toFixed(9)),T=Y.asin(((h-C)/i).toFixed(9));S=B&gt;t?U-S:S,T=B&gt;l?U-T:T,0&gt;S&amp;&amp;(S=2*U+S),0&gt;T&amp;&amp;(T=2*U+T),o&amp;&amp;S&gt;T&amp;&amp;(S-=2*U),!o&amp;&amp;T&gt;S&amp;&amp;(T-=2*U)}var A=T-S;if(H(A)&gt;c){var E=T,M=l,N=h;T=S+c*(o&amp;&amp;T&gt;S?1:-1),l=B+r*Y.cos(T),h=C+i*Y.sin(T),p=Ut(l,h,r,i,a,0,o,M,N,[T,E,B,C])}A=T-S;var L=Y.cos(S),z=Y.sin(S),F=Y.cos(T),R=Y.sin(T),I=Y.tan(A/4),j=4/3*r*I,D=4/3*i*I,V=[t,e],O=[t+j*z,e-D*L],W=[l+j*R,h-D*F],G=[l,h];if(O[0]=2*V[0]-O[0],O[1]=2*V[1]-O[1],u)return[O,W,G][P](p);p=[O,W,G][P](p).join()[q](&quot;,&quot;);for(var X=[],$=0,Z=p.length;Z&gt;$;$++)X[$]=$%2?g(p[$-1],p[$],f).y:g(p[$],p[$+1],f).x;return X},$t=function(t,e,r,i,n,a,s,o,l){var h=1-l;return{x:X(h,3)*t+3*X(h,2)*l*r+3*h*l*l*n+X(l,3)*s,y:X(h,3)*e+3*X(h,2)*l*i+3*h*l*l*a+X(l,3)*o}},Zt=n(function(t,e,r,i,n,a,s,o){var l=n-2*r+t-(s-2*n+r),h=2*(r-t)-2*(n-r),u=t-r,c=(-h+Y.sqrt(h*h-4*l*u))/2/l,f=(-h-Y.sqrt(h*h-4*l*u))/2/l,p=[e,o],d=[t,s],g;return H(c)&gt;&quot;1e12&quot;&amp;&amp;(c=.5),H(f)&gt;&quot;1e12&quot;&amp;&amp;(f=.5),c&gt;0&amp;&amp;1&gt;c&amp;&amp;(g=$t(t,e,r,i,n,a,s,o,c),d.push(g.x),p.push(g.y)),f&gt;0&amp;&amp;1&gt;f&amp;&amp;(g=$t(t,e,r,i,n,a,s,o,f),d.push(g.x),p.push(g.y)),l=a-2*i+e-(o-2*a+i),h=2*(i-e)-2*(a-i),u=e-i,c=(-h+Y.sqrt(h*h-4*l*u))/2/l,f=(-h-Y.sqrt(h*h-4*l*u))/2/l,H(c)&gt;&quot;1e12&quot;&amp;&amp;(c=.5),H(f)&gt;&quot;1e12&quot;&amp;&amp;(f=.5),c&gt;0&amp;&amp;1&gt;c&amp;&amp;(g=$t(t,e,r,i,n,a,s,o,c),d.push(g.x),p.push(g.y)),f&gt;0&amp;&amp;1&gt;f&amp;&amp;(g=$t(t,e,r,i,n,a,s,o,f),d.push(g.x),p.push(g.y)),{min:{x:G[z](0,d),y:G[z](0,p)},max:{x:W[z](0,d),y:W[z](0,p)}}}),Qt=e._path2curve=n(function(t,e){var r=!e&amp;&amp;Vt(t);if(!e&amp;&amp;r.curve)return Yt(r.curve);for(var i=Gt(t),n=e&amp;&amp;Gt(e),a={x:0,y:0,bx:0,by:0,X:0,Y:0,qx:null,qy:null},s={x:0,y:0,bx:0,by:0,X:0,Y:0,qx:null,qy:null},o=(function(t,e,r){var i,n,a={T:1,Q:1};if(!t)return[&quot;C&quot;,e.x,e.y,e.x,e.y,e.x,e.y];switch(!(t[0]in a)&amp;&amp;(e.qx=e.qy=null),t[0]){case&quot;M&quot;:e.X=t[1],e.Y=t[2];break;case&quot;A&quot;:t=[&quot;C&quot;][P](Ut[z](0,[e.x,e.y][P](t.slice(1))));break;case&quot;S&quot;:&quot;C&quot;==r||&quot;S&quot;==r?(i=2*e.x-e.bx,n=2*e.y-e.by):(i=e.x,n=e.y),t=[&quot;C&quot;,i,n][P](t.slice(1));break;case&quot;T&quot;:&quot;Q&quot;==r||&quot;T&quot;==r?(e.qx=2*e.x-e.qx,e.qy=2*e.y-e.qy):(e.qx=e.x,e.qy=e.y),t=[&quot;C&quot;][P](Xt(e.x,e.y,e.qx,e.qy,t[1],t[2]));break;case&quot;Q&quot;:e.qx=t[1],e.qy=t[2],t=[&quot;C&quot;][P](Xt(e.x,e.y,t[1],t[2],t[3],t[4]));break;case&quot;L&quot;:t=[&quot;C&quot;][P](Ht(e.x,e.y,t[1],t[2]));break;case&quot;H&quot;:t=[&quot;C&quot;][P](Ht(e.x,e.y,t[1],e.y));break;case&quot;V&quot;:t=[&quot;C&quot;][P](Ht(e.x,e.y,e.x,t[1]));break;case&quot;Z&quot;:t=[&quot;C&quot;][P](Ht(e.x,e.y,e.X,e.Y))}return t}),l=function(t,e){if(t[e].length&gt;7){t[e].shift();for(var r=t[e];r.length;)u[e]=&quot;A&quot;,n&amp;&amp;(c[e]=&quot;A&quot;),t.splice(e++,0,[&quot;C&quot;][P](r.splice(0,6)));t.splice(e,1),g=W(i.length,n&amp;&amp;n.length||0)}},h=function(t,e,r,a,s){t&amp;&amp;e&amp;&amp;&quot;M&quot;==t[s][0]&amp;&amp;&quot;M&quot;!=e[s][0]&amp;&amp;(e.splice(s,0,[&quot;M&quot;,a.x,a.y]),r.bx=0,r.by=0,r.x=t[s][1],r.y=t[s][2],g=W(i.length,n&amp;&amp;n.length||0))},u=[],c=[],f=&quot;&quot;,p=&quot;&quot;,d=0,g=W(i.length,n&amp;&amp;n.length||0);g&gt;d;d++){i[d]&amp;&amp;(f=i[d][0]),&quot;C&quot;!=f&amp;&amp;(u[d]=f,d&amp;&amp;(p=u[d-1])),i[d]=o(i[d],a,p),&quot;A&quot;!=u[d]&amp;&amp;&quot;C&quot;==f&amp;&amp;(u[d]=&quot;C&quot;),l(i,d),n&amp;&amp;(n[d]&amp;&amp;(f=n[d][0]),&quot;C&quot;!=f&amp;&amp;(c[d]=f,d&amp;&amp;(p=c[d-1])),n[d]=o(n[d],s,p),&quot;A&quot;!=c[d]&amp;&amp;&quot;C&quot;==f&amp;&amp;(c[d]=&quot;C&quot;),l(n,d)),h(i,n,a,s,d),h(n,i,s,a,d);var x=i[d],v=n&amp;&amp;n[d],y=x.length,m=n&amp;&amp;v.length;a.x=x[y-2],a.y=x[y-1],a.bx=ht(x[y-4])||a.x,a.by=ht(x[y-3])||a.y,s.bx=n&amp;&amp;(ht(v[m-4])||s.x),s.by=n&amp;&amp;(ht(v[m-3])||s.y),s.x=n&amp;&amp;v[m-2],s.y=n&amp;&amp;v[m-1]}return n||(r.curve=Yt(i)),n?[i,n]:i},null,Yt),Jt=e._parseDots=n(function(t){for(var r=[],i=0,n=t.length;n&gt;i;i++){var a={},s=t[i].match(/^([^:]*):?([\d\.]*)/);if(a.color=e.getRGB(s[1]),a.color.error)return null;a.opacity=a.color.opacity,a.color=a.color.hex,s[2]&amp;&amp;(a.offset=s[2]+&quot;%&quot;),r.push(a)}for(i=1,n=r.length-1;n&gt;i;i++)if(!r[i].offset){for(var o=ht(r[i-1].offset||0),l=0,h=i+1;n&gt;h;h++)if(r[h].offset){l=r[h].offset;break}l||(l=100,h=n),l=ht(l);for(var u=(l-o)/(h-i+1);h&gt;i;i++)o+=u,r[i].offset=o+&quot;%&quot;}return r}),Kt=e._tear=function(t,e){t==e.top&amp;&amp;(e.top=t.prev),t==e.bottom&amp;&amp;(e.bottom=t.next),t.next&amp;&amp;(t.next.prev=t.prev),t.prev&amp;&amp;(t.prev.next=t.next)},te=e._tofront=function(t,e){e.top!==t&amp;&amp;(Kt(t,e),t.next=null,t.prev=e.top,e.top.next=t,e.top=t)},ee=e._toback=function(t,e){e.bottom!==t&amp;&amp;(Kt(t,e),t.next=e.bottom,t.prev=null,e.bottom.prev=t,e.bottom=t)},re=e._insertafter=function(t,e,r){Kt(t,r),e==r.top&amp;&amp;(r.top=t),e.next&amp;&amp;(e.next.prev=t),t.next=e.next,t.prev=e,e.next=t},ie=e._insertbefore=function(t,e,r){Kt(t,r),e==r.bottom&amp;&amp;(r.bottom=t),e.prev&amp;&amp;(e.prev.next=t),t.prev=e.prev,e.prev=t,t.next=e},ne=e.toMatrix=function(t,e){var r=Ot(t),i={_:{transform:R},getBBox:function(){return r}};return se(i,e),i.matrix},ae=e.transformPath=function(t,e){return Mt(t,ne(t,e))},se=e._extractTransform=function(t,r){if(null==r)return t._.transform;r=j(r).replace(/\.{3}|\u2026/g,t._.transform||R);var i=e.parseTransformString(r),n=0,a=0,s=0,o=1,l=1,h=t._,u=new g;if(h.transform=i||[],i)for(var c=0,f=i.length;f&gt;c;c++){var p=i[c],d=p.length,x=j(p[0]).toLowerCase(),v=p[0]!=x,y=v?u.invert():0,m,b,_,w,k;&quot;t&quot;==x&amp;&amp;3==d?v?(m=y.x(0,0),b=y.y(0,0),_=y.x(p[1],p[2]),w=y.y(p[1],p[2]),u.translate(_-m,w-b)):u.translate(p[1],p[2]):&quot;r&quot;==x?2==d?(k=k||t.getBBox(1),u.rotate(p[1],k.x+k.width/2,k.y+k.height/2),n+=p[1]):4==d&amp;&amp;(v?(_=y.x(p[2],p[3]),w=y.y(p[2],p[3]),u.rotate(p[1],_,w)):u.rotate(p[1],p[2],p[3]),n+=p[1]):&quot;s&quot;==x?2==d||3==d?(k=k||t.getBBox(1),u.scale(p[1],p[d-1],k.x+k.width/2,k.y+k.height/2),o*=p[1],l*=p[d-1]):5==d&amp;&amp;(v?(_=y.x(p[3],p[4]),w=y.y(p[3],p[4]),u.scale(p[1],p[2],_,w)):u.scale(p[1],p[2],p[3],p[4]),o*=p[1],l*=p[2]):&quot;m&quot;==x&amp;&amp;7==d&amp;&amp;u.add(p[1],p[2],p[3],p[4],p[5],p[6]),h.dirtyT=1,t.matrix=u}t.matrix=u,h.sx=o,h.sy=l,h.deg=n,h.dx=a=u.e,h.dy=s=u.f,1==o&amp;&amp;1==l&amp;&amp;!n&amp;&amp;h.bbox?(h.bbox.x+=+a,h.bbox.y+=+s):h.dirtyT=1},oe=function(t){var e=t[0];switch(e.toLowerCase()){case&quot;t&quot;:return[e,0,0];case&quot;m&quot;:return[e,1,0,0,1,0,0];case&quot;r&quot;:return 4==t.length?[e,0,t[2],t[3]]:[e,0];case&quot;s&quot;:return 5==t.length?[e,1,1,t[3],t[4]]:3==t.length?[e,1,1]:[e,1]}},le=e._equaliseTransform=function(t,r){r=j(r).replace(/\.{3}|\u2026/g,t),t=e.parseTransformString(t)||[],r=e.parseTransformString(r)||[];for(var i=W(t.length,r.length),n=[],a=[],s=0,o,l,h,u;i&gt;s;s++){if(h=t[s]||oe(r[s]),u=r[s]||oe(h),h[0]!=u[0]||&quot;r&quot;==h[0].toLowerCase()&amp;&amp;(h[2]!=u[2]||h[3]!=u[3])||&quot;s&quot;==h[0].toLowerCase()&amp;&amp;(h[3]!=u[3]||h[4]!=u[4]))return;for(n[s]=[],a[s]=[],o=0,l=W(h.length,u.length);l&gt;o;o++)o in h&amp;&amp;(n[s][o]=h[o]),o in u&amp;&amp;(a[s][o]=u[o])}return{from:n,to:a}};e._getContainer=function(t,r,i,n){var a;return a=null!=n||e.is(t,&quot;object&quot;)?t:A.doc.getElementById(t),null!=a?a.tagName?null==r?{container:a,width:a.style.pixelWidth||a.offsetWidth,height:a.style.pixelHeight||a.offsetHeight}:{container:a,width:r,height:i}:{container:1,x:t,y:r,width:i,height:n}:void 0},e.pathToRelative=Wt,e._engine={},e.path2curve=Qt,e.matrix=function(t,e,r,i,n,a){return new g(t,e,r,i,n,a)},function(t){function r(t){return t[0]*t[0]+t[1]*t[1]}function i(t){var e=Y.sqrt(r(t));t[0]&amp;&amp;(t[0]/=e),t[1]&amp;&amp;(t[1]/=e)}t.add=function(t,e,r,i,n,a){var s=[[],[],[]],o=[[this.a,this.c,this.e],[this.b,this.d,this.f],[0,0,1]],l=[[t,r,n],[e,i,a],[0,0,1]],h,u,c,f;for(t&amp;&amp;t instanceof g&amp;&amp;(l=[[t.a,t.c,t.e],[t.b,t.d,t.f],[0,0,1]]),h=0;3&gt;h;h++)for(u=0;3&gt;u;u++){for(f=0,c=0;3&gt;c;c++)f+=o[h][c]*l[c][u];s[h][u]=f}this.a=s[0][0],this.b=s[1][0],this.c=s[0][1],this.d=s[1][1],this.e=s[0][2],this.f=s[1][2]},t.invert=function(){var t=this,e=t.a*t.d-t.b*t.c;return new g(t.d/e,-t.b/e,-t.c/e,t.a/e,(t.c*t.f-t.d*t.e)/e,(t.b*t.e-t.a*t.f)/e)},t.clone=function(){return new g(this.a,this.b,this.c,this.d,this.e,this.f)},t.translate=function(t,e){
+this.add(1,0,0,1,t,e)},t.scale=function(t,e,r,i){null==e&amp;&amp;(e=t),(r||i)&amp;&amp;this.add(1,0,0,1,r,i),this.add(t,0,0,e,0,0),(r||i)&amp;&amp;this.add(1,0,0,1,-r,-i)},t.rotate=function(t,r,i){t=e.rad(t),r=r||0,i=i||0;var n=+Y.cos(t).toFixed(9),a=+Y.sin(t).toFixed(9);this.add(n,a,-a,n,r,i),this.add(1,0,0,1,-r,-i)},t.x=function(t,e){return t*this.a+e*this.c+this.e},t.y=function(t,e){return t*this.b+e*this.d+this.f},t.get=function(t){return+this[j.fromCharCode(97+t)].toFixed(4)},t.toString=function(){return e.svg?&quot;matrix(&quot;+[this.get(0),this.get(1),this.get(2),this.get(3),this.get(4),this.get(5)].join()+&quot;)&quot;:[this.get(0),this.get(2),this.get(1),this.get(3),0,0].join()},t.toFilter=function(){return&quot;progid:DXImageTransform.Microsoft.Matrix(M11=&quot;+this.get(0)+&quot;, M12=&quot;+this.get(2)+&quot;, M21=&quot;+this.get(1)+&quot;, M22=&quot;+this.get(3)+&quot;, Dx=&quot;+this.get(4)+&quot;, Dy=&quot;+this.get(5)+&quot;, sizingmethod='auto expand')&quot;},t.offset=function(){return[this.e.toFixed(4),this.f.toFixed(4)]},t.split=function(){var t={};t.dx=this.e,t.dy=this.f;var n=[[this.a,this.c],[this.b,this.d]];t.scalex=Y.sqrt(r(n[0])),i(n[0]),t.shear=n[0][0]*n[1][0]+n[0][1]*n[1][1],n[1]=[n[1][0]-n[0][0]*t.shear,n[1][1]-n[0][1]*t.shear],t.scaley=Y.sqrt(r(n[1])),i(n[1]),t.shear/=t.scaley;var a=-n[0][1],s=n[1][1];return 0&gt;s?(t.rotate=e.deg(Y.acos(s)),0&gt;a&amp;&amp;(t.rotate=360-t.rotate)):t.rotate=e.deg(Y.asin(a)),t.isSimple=!(+t.shear.toFixed(9)||t.scalex.toFixed(9)!=t.scaley.toFixed(9)&amp;&amp;t.rotate),t.isSuperSimple=!+t.shear.toFixed(9)&amp;&amp;t.scalex.toFixed(9)==t.scaley.toFixed(9)&amp;&amp;!t.rotate,t.noRotation=!+t.shear.toFixed(9)&amp;&amp;!t.rotate,t},t.toTransformString=function(t){var e=t||this[q]();return e.isSimple?(e.scalex=+e.scalex.toFixed(4),e.scaley=+e.scaley.toFixed(4),e.rotate=+e.rotate.toFixed(4),(e.dx||e.dy?&quot;t&quot;+[e.dx,e.dy]:R)+(1!=e.scalex||1!=e.scaley?&quot;s&quot;+[e.scalex,e.scaley,0,0]:R)+(e.rotate?&quot;r&quot;+[e.rotate,0,0]:R)):&quot;m&quot;+[this.get(0),this.get(1),this.get(2),this.get(3),this.get(4),this.get(5)]}}(g.prototype);for(var he=function(){this.returnValue=!1},ue=function(){return this.originalEvent.preventDefault()},ce=function(){this.cancelBubble=!0},fe=function(){return this.originalEvent.stopPropagation()},pe=function(t){var e=A.doc.documentElement.scrollTop||A.doc.body.scrollTop,r=A.doc.documentElement.scrollLeft||A.doc.body.scrollLeft;return{x:t.clientX+r,y:t.clientY+e}},de=function(){return A.doc.addEventListener?function(t,e,r,i){var n=function(t){var e=pe(t);return r.call(i,t,e.x,e.y)};if(t.addEventListener(e,n,{passive:!1}),F&amp;&amp;V[e]){var a=function(e){for(var n=pe(e),a=e,s=0,o=e.targetTouches&amp;&amp;e.targetTouches.length;o&gt;s;s++)if(e.targetTouches[s].target==t){e=e.targetTouches[s],e.originalEvent=a,e.preventDefault=ue,e.stopPropagation=fe;break}return r.call(i,e,n.x,n.y)};t.addEventListener(V[e],a,{passive:!1})}return function(){return t.removeEventListener(e,n,{passive:!1}),F&amp;&amp;V[e]&amp;&amp;t.removeEventListener(V[e],a,{passive:!1}),!0}}:A.doc.attachEvent?function(t,e,r,i){var n=function(t){t=t||A.win.event;var e=A.doc.documentElement.scrollTop||A.doc.body.scrollTop,n=A.doc.documentElement.scrollLeft||A.doc.body.scrollLeft,a=t.clientX+n,s=t.clientY+e;return t.preventDefault=t.preventDefault||he,t.stopPropagation=t.stopPropagation||ce,r.call(i,t,a,s)};t.attachEvent(&quot;on&quot;+e,n);var a=function(){return t.detachEvent(&quot;on&quot;+e,n),!0};return a}:void 0}(),ge=[],xe=function(e){for(var r=e.clientX,i=e.clientY,n=A.doc.documentElement.scrollTop||A.doc.body.scrollTop,a=A.doc.documentElement.scrollLeft||A.doc.body.scrollLeft,s,o=ge.length;o--;){if(s=ge[o],F&amp;&amp;e.touches){for(var l=e.touches.length,h;l--;)if(h=e.touches[l],h.identifier==s.el._drag.id){r=h.clientX,i=h.clientY,(e.originalEvent?e.originalEvent:e).preventDefault();break}}else e.preventDefault();var u=s.el.node,c,f=u.nextSibling,p=u.parentNode,d=u.style.display;A.win.opera&amp;&amp;p.removeChild(u),u.style.display=&quot;none&quot;,c=s.el.paper.getElementByPoint(r,i),u.style.display=d,A.win.opera&amp;&amp;(f?p.insertBefore(u,f):p.appendChild(u)),c&amp;&amp;t(&quot;raphael.drag.over.&quot;+s.el.id,s.el,c),r+=a,i+=n,t(&quot;raphael.drag.move.&quot;+s.el.id,s.move_scope||s.el,r-s.el._drag.x,i-s.el._drag.y,r,i,e)}},ve=function(r){e.unmousemove(xe).unmouseup(ve);for(var i=ge.length,n;i--;)n=ge[i],n.el._drag={},t(&quot;raphael.drag.end.&quot;+n.el.id,n.end_scope||n.start_scope||n.move_scope||n.el,r);ge=[]},ye=e.el={},me=D.length;me--;)!function(t){e[t]=ye[t]=function(r,i){return e.is(r,&quot;function&quot;)&amp;&amp;(this.events=this.events||[],this.events.push({name:t,f:r,unbind:de(this.shape||this.node||A.doc,t,r,i||this)})),this},e[&quot;un&quot;+t]=ye[&quot;un&quot;+t]=function(r){for(var i=this.events||[],n=i.length;n--;)i[n].name!=t||!e.is(r,&quot;undefined&quot;)&amp;&amp;i[n].f!=r||(i[n].unbind(),i.splice(n,1),!i.length&amp;&amp;delete this.events);return this}}(D[me]);ye.data=function(r,i){var n=wt[this.id]=wt[this.id]||{};if(0==arguments.length)return n;if(1==arguments.length){if(e.is(r,&quot;object&quot;)){for(var a in r)r[T](a)&amp;&amp;this.data(a,r[a]);return this}return t(&quot;raphael.data.get.&quot;+this.id,this,n[r],r),n[r]}return n[r]=i,t(&quot;raphael.data.set.&quot;+this.id,this,i,r),this},ye.removeData=function(t){return null==t?wt[this.id]={}:wt[this.id]&amp;&amp;delete wt[this.id][t],this},ye.getData=function(){return r(wt[this.id]||{})},ye.hover=function(t,e,r,i){return this.mouseover(t,r).mouseout(e,i||r)},ye.unhover=function(t,e){return this.unmouseover(t).unmouseout(e)};var be=[];ye.drag=function(r,i,n,a,s,o){function l(l){(l.originalEvent||l).preventDefault();var h=l.clientX,u=l.clientY,c=A.doc.documentElement.scrollTop||A.doc.body.scrollTop,f=A.doc.documentElement.scrollLeft||A.doc.body.scrollLeft;if(this._drag.id=l.identifier,F&amp;&amp;l.touches)for(var p=l.touches.length,d;p--;)if(d=l.touches[p],this._drag.id=d.identifier,d.identifier==this._drag.id){h=d.clientX,u=d.clientY;break}this._drag.x=h+f,this._drag.y=u+c,!ge.length&amp;&amp;e.mousemove(xe).mouseup(ve),ge.push({el:this,move_scope:a,start_scope:s,end_scope:o}),i&amp;&amp;t.on(&quot;raphael.drag.start.&quot;+this.id,i),r&amp;&amp;t.on(&quot;raphael.drag.move.&quot;+this.id,r),n&amp;&amp;t.on(&quot;raphael.drag.end.&quot;+this.id,n),t(&quot;raphael.drag.start.&quot;+this.id,s||a||this,l.clientX+f,l.clientY+c,l)}return this._drag={},be.push({el:this,start:l}),this.mousedown(l),this},ye.onDragOver=function(e){e?t.on(&quot;raphael.drag.over.&quot;+this.id,e):t.unbind(&quot;raphael.drag.over.&quot;+this.id)},ye.undrag=function(){for(var r=be.length;r--;)be[r].el==this&amp;&amp;(this.unmousedown(be[r].start),be.splice(r,1),t.unbind(&quot;raphael.drag.*.&quot;+this.id));!be.length&amp;&amp;e.unmousemove(xe).unmouseup(ve),ge=[]},N.circle=function(t,r,i){var n=e._engine.circle(this,t||0,r||0,i||0);return this.__set__&amp;&amp;this.__set__.push(n),n},N.rect=function(t,r,i,n,a){var s=e._engine.rect(this,t||0,r||0,i||0,n||0,a||0);return this.__set__&amp;&amp;this.__set__.push(s),s},N.ellipse=function(t,r,i,n){var a=e._engine.ellipse(this,t||0,r||0,i||0,n||0);return this.__set__&amp;&amp;this.__set__.push(a),a},N.path=function(t){t&amp;&amp;!e.is(t,Z)&amp;&amp;!e.is(t[0],Q)&amp;&amp;(t+=R);var r=e._engine.path(e.format[z](e,arguments),this);return this.__set__&amp;&amp;this.__set__.push(r),r},N.image=function(t,r,i,n,a){var s=e._engine.image(this,t||&quot;about:blank&quot;,r||0,i||0,n||0,a||0);return this.__set__&amp;&amp;this.__set__.push(s),s},N.text=function(t,r,i){var n=e._engine.text(this,t||0,r||0,j(i));return this.__set__&amp;&amp;this.__set__.push(n),n},N.set=function(t){!e.is(t,&quot;array&quot;)&amp;&amp;(t=Array.prototype.splice.call(arguments,0,arguments.length));var r=new ze(t);return this.__set__&amp;&amp;this.__set__.push(r),r.paper=this,r.type=&quot;set&quot;,r},N.setStart=function(t){this.__set__=t||this.set()},N.setFinish=function(t){var e=this.__set__;return delete this.__set__,e},N.getSize=function(){var t=this.canvas.parentNode;return{width:t.offsetWidth,height:t.offsetHeight}},N.setSize=function(t,r){return e._engine.setSize.call(this,t,r)},N.setViewBox=function(t,r,i,n,a){return e._engine.setViewBox.call(this,t,r,i,n,a)},N.top=N.bottom=null,N.raphael=e;var _e=function(t){var e=t.getBoundingClientRect(),r=t.ownerDocument,i=r.body,n=r.documentElement,a=n.clientTop||i.clientTop||0,s=n.clientLeft||i.clientLeft||0,o=e.top+(A.win.pageYOffset||n.scrollTop||i.scrollTop)-a,l=e.left+(A.win.pageXOffset||n.scrollLeft||i.scrollLeft)-s;return{y:o,x:l}};N.getElementByPoint=function(t,e){var r=this,i=r.canvas,n=A.doc.elementFromPoint(t,e);if(A.win.opera&amp;&amp;&quot;svg&quot;==n.tagName){var a=_e(i),s=i.createSVGRect();s.x=t-a.x,s.y=e-a.y,s.width=s.height=1;var o=i.getIntersectionList(s,null);o.length&amp;&amp;(n=o[o.length-1])}if(!n)return null;for(;n.parentNode&amp;&amp;n!=i.parentNode&amp;&amp;!n.raphael;)n=n.parentNode;return n==r.canvas.parentNode&amp;&amp;(n=i),n=n&amp;&amp;n.raphael?r.getById(n.raphaelid):null},N.getElementsByBBox=function(t){var r=this.set();return this.forEach(function(i){e.isBBoxIntersect(i.getBBox(),t)&amp;&amp;r.push(i)}),r},N.getById=function(t){for(var e=this.bottom;e;){if(e.id==t)return e;e=e.next}return null},N.forEach=function(t,e){for(var r=this.bottom;r;){if(t.call(e,r)===!1)return this;r=r.next}return this},N.getElementsByPoint=function(t,e){var r=this.set();return this.forEach(function(i){i.isPointInside(t,e)&amp;&amp;r.push(i)}),r},ye.isPointInside=function(t,r){var i=this.realPath=Et[this.type](this);return this.attr(&quot;transform&quot;)&amp;&amp;this.attr(&quot;transform&quot;).length&amp;&amp;(i=e.transformPath(i,this.attr(&quot;transform&quot;))),e.isPointInsidePath(i,t,r)},ye.getBBox=function(t){if(this.removed)return{};var e=this._;return t?(!e.dirty&amp;&amp;e.bboxwt||(this.realPath=Et[this.type](this),e.bboxwt=Ot(this.realPath),e.bboxwt.toString=v,e.dirty=0),e.bboxwt):((e.dirty||e.dirtyT||!e.bbox)&amp;&amp;(!e.dirty&amp;&amp;this.realPath||(e.bboxwt=0,this.realPath=Et[this.type](this)),e.bbox=Ot(Mt(this.realPath,this.matrix)),e.bbox.toString=v,e.dirty=e.dirtyT=0),e.bbox)},ye.clone=function(){if(this.removed)return null;var t=this.paper[this.type]().attr(this.attr());return this.__set__&amp;&amp;this.__set__.push(t),t},ye.glow=function(t){if(&quot;text&quot;==this.type)return null;t=t||{};var e={width:(t.width||10)+(+this.attr(&quot;stroke-width&quot;)||1),fill:t.fill||!1,opacity:null==t.opacity?.5:t.opacity,offsetx:t.offsetx||0,offsety:t.offsety||0,color:t.color||&quot;#000&quot;},r=e.width/2,i=this.paper,n=i.set(),a=this.realPath||Et[this.type](this);a=this.matrix?Mt(a,this.matrix):a;for(var s=1;r+1&gt;s;s++)n.push(i.path(a).attr({stroke:e.color,fill:e.fill?e.color:&quot;none&quot;,&quot;stroke-linejoin&quot;:&quot;round&quot;,&quot;stroke-linecap&quot;:&quot;round&quot;,&quot;stroke-width&quot;:+(e.width/r*s).toFixed(3),opacity:+(e.opacity/r).toFixed(3)}));return n.insertBefore(this).translate(e.offsetx,e.offsety)};var we={},ke=function(t,r,i,n,a,s,o,u,c){return null==c?l(t,r,i,n,a,s,o,u):e.findDotsAtSegment(t,r,i,n,a,s,o,u,h(t,r,i,n,a,s,o,u,c))},Be=function(t,r){return function(i,n,a){i=Qt(i);for(var s,o,l,h,u=&quot;&quot;,c={},f,p=0,d=0,g=i.length;g&gt;d;d++){if(l=i[d],&quot;M&quot;==l[0])s=+l[1],o=+l[2];else{if(h=ke(s,o,l[1],l[2],l[3],l[4],l[5],l[6]),p+h&gt;n){if(r&amp;&amp;!c.start){if(f=ke(s,o,l[1],l[2],l[3],l[4],l[5],l[6],n-p),u+=[&quot;C&quot;+f.start.x,f.start.y,f.m.x,f.m.y,f.x,f.y],a)return u;c.start=u,u=[&quot;M&quot;+f.x,f.y+&quot;C&quot;+f.n.x,f.n.y,f.end.x,f.end.y,l[5],l[6]].join(),p+=h,s=+l[5],o=+l[6];continue}if(!t&amp;&amp;!r)return f=ke(s,o,l[1],l[2],l[3],l[4],l[5],l[6],n-p),{x:f.x,y:f.y,alpha:f.alpha}}p+=h,s=+l[5],o=+l[6]}u+=l.shift()+l}return c.end=u,f=t?p:r?c:e.findDotsAtSegment(s,o,l[0],l[1],l[2],l[3],l[4],l[5],1),f.alpha&amp;&amp;(f={x:f.x,y:f.y,alpha:f.alpha}),f}},Ce=Be(1),Se=Be(),Te=Be(0,1);e.getTotalLength=Ce,e.getPointAtLength=Se,e.getSubpath=function(t,e,r){if(this.getTotalLength(t)-r&lt;1e-6)return Te(t,e).end;var i=Te(t,r,1);return e?Te(i,e).end:i},ye.getTotalLength=function(){var t=this.getPath();if(t)return this.node.getTotalLength?this.node.getTotalLength():Ce(t)},ye.getPointAtLength=function(t){var e=this.getPath();if(e)return Se(e,t)},ye.getPath=function(){var t,r=e._getPath[this.type];if(&quot;text&quot;!=this.type&amp;&amp;&quot;set&quot;!=this.type)return r&amp;&amp;(t=r(this)),t},ye.getSubpath=function(t,r){var i=this.getPath();if(i)return e.getSubpath(i,t,r)};var Ae=e.easing_formulas={linear:function(t){return t},&quot;&lt;&quot;:function(t){return X(t,1.7)},&quot;&gt;&quot;:function(t){return X(t,.48)},&quot;&lt;&gt;&quot;:function(t){var e=.48-t/1.04,r=Y.sqrt(.1734+e*e),i=r-e,n=X(H(i),1/3)*(0&gt;i?-1:1),a=-r-e,s=X(H(a),1/3)*(0&gt;a?-1:1),o=n+s+.5;return 3*(1-o)*o*o+o*o*o},backIn:function(t){var e=1.70158;return t*t*((e+1)*t-e)},backOut:function(t){t-=1;var e=1.70158;return t*t*((e+1)*t+e)+1},elastic:function(t){return t==!!t?t:X(2,-10*t)*Y.sin((t-.075)*(2*U)/.3)+1},bounce:function(t){var e=7.5625,r=2.75,i;return 1/r&gt;t?i=e*t*t:2/r&gt;t?(t-=1.5/r,i=e*t*t+.75):2.5/r&gt;t?(t-=2.25/r,i=e*t*t+.9375):(t-=2.625/r,i=e*t*t+.984375),i}};Ae.easeIn=Ae[&quot;ease-in&quot;]=Ae[&quot;&lt;&quot;],Ae.easeOut=Ae[&quot;ease-out&quot;]=Ae[&quot;&gt;&quot;],Ae.easeInOut=Ae[&quot;ease-in-out&quot;]=Ae[&quot;&lt;&gt;&quot;],Ae[&quot;back-in&quot;]=Ae.backIn,Ae[&quot;back-out&quot;]=Ae.backOut;var Ee=[],Me=window.requestAnimationFrame||window.webkitRequestAnimationFrame||window.mozRequestAnimationFrame||window.oRequestAnimationFrame||window.msRequestAnimationFrame||function(t){setTimeout(t,16)},Ne=function(){for(var r=+new Date,i=0;i&lt;Ee.length;i++){var n=Ee[i];if(!n.el.removed&amp;&amp;!n.paused){var a=r-n.start,s=n.ms,o=n.easing,l=n.from,h=n.diff,u=n.to,c=n.t,f=n.el,p={},d,g={},x;if(n.initstatus?(a=(n.initstatus*n.anim.top-n.prev)/(n.percent-n.prev)*s,n.status=n.initstatus,delete n.initstatus,n.stop&amp;&amp;Ee.splice(i--,1)):n.status=(n.prev+(n.percent-n.prev)*(a/s))/n.anim.top,!(0&gt;a))if(s&gt;a){var v=o(a/s);for(var y in l)if(l[T](y)){switch(pt[y]){case $:d=+l[y]+v*s*h[y];break;case&quot;colour&quot;:d=&quot;rgb(&quot;+[Le(ot(l[y].r+v*s*h[y].r)),Le(ot(l[y].g+v*s*h[y].g)),Le(ot(l[y].b+v*s*h[y].b))].join(&quot;,&quot;)+&quot;)&quot;;break;case&quot;path&quot;:d=[];for(var m=0,_=l[y].length;_&gt;m;m++){d[m]=[l[y][m][0]];for(var w=1,k=l[y][m].length;k&gt;w;w++)d[m][w]=+l[y][m][w]+v*s*h[y][m][w];d[m]=d[m].join(I)}d=d.join(I);break;case&quot;transform&quot;:if(h[y].real)for(d=[],m=0,_=l[y].length;_&gt;m;m++)for(d[m]=[l[y][m][0]],w=1,k=l[y][m].length;k&gt;w;w++)d[m][w]=l[y][m][w]+v*s*h[y][m][w];else{var B=function(t){return+l[y][t]+v*s*h[y][t]};d=[[&quot;m&quot;,B(0),B(1),B(2),B(3),B(4),B(5)]]}break;case&quot;csv&quot;:if(&quot;clip-rect&quot;==y)for(d=[],m=4;m--;)d[m]=+l[y][m]+v*s*h[y][m];break;default:var C=[][P](l[y]);for(d=[],m=f.paper.customAttributes[y].length;m--;)d[m]=+C[m]+v*s*h[y][m]}p[y]=d}f.attr(p),function(e,r,i){setTimeout(function(){t(&quot;raphael.anim.frame.&quot;+e,r,i)})}(f.id,f,n.anim)}else{if(function(r,i,n){setTimeout(function(){t(&quot;raphael.anim.frame.&quot;+i.id,i,n),t(&quot;raphael.anim.finish.&quot;+i.id,i,n),e.is(r,&quot;function&quot;)&amp;&amp;r.call(i)})}(n.callback,f,n.anim),f.attr(u),Ee.splice(i--,1),n.repeat&gt;1&amp;&amp;!n.next){for(x in u)u[T](x)&amp;&amp;(g[x]=n.totalOrigin[x]);n.el.attr(g),b(n.anim,n.el,n.anim.percents[0],null,n.totalOrigin,n.repeat-1)}n.next&amp;&amp;!n.stop&amp;&amp;b(n.anim,n.el,n.next,null,n.totalOrigin,n.repeat)}}}Ee.length&amp;&amp;Me(Ne)},Le=function(t){return t&gt;255?255:0&gt;t?0:t};ye.animateWith=function(t,r,i,n,a,s){var o=this;if(o.removed)return s&amp;&amp;s.call(o),o;var l=i instanceof m?i:e.animation(i,n,a,s),h,u;b(l,o,l.percents[0],null,o.attr());for(var c=0,f=Ee.length;f&gt;c;c++)if(Ee[c].anim==r&amp;&amp;Ee[c].el==t){Ee[f-1].start=Ee[c].start;break}return o},ye.onAnimation=function(e){return e?t.on(&quot;raphael.anim.frame.&quot;+this.id,e):t.unbind(&quot;raphael.anim.frame.&quot;+this.id),this},m.prototype.delay=function(t){var e=new m(this.anim,this.ms);return e.times=this.times,e.del=+t||0,e},m.prototype.repeat=function(t){var e=new m(this.anim,this.ms);return e.del=this.del,e.times=Y.floor(W(t,0))||1,e},e.animation=function(t,r,i,n){if(t instanceof m)return t;!e.is(i,&quot;function&quot;)&amp;&amp;i||(n=n||i||null,i=null),t=Object(t),r=+r||0;var a={},s,o;for(o in t)t[T](o)&amp;&amp;ht(o)!=o&amp;&amp;ht(o)+&quot;%&quot;!=o&amp;&amp;(s=!0,a[o]=t[o]);if(s)return i&amp;&amp;(a.easing=i),n&amp;&amp;(a.callback=n),new m({100:a},r);if(n){var l=0;for(var h in t){var u=ut(h);t[T](h)&amp;&amp;u&gt;l&amp;&amp;(l=u)}l+=&quot;%&quot;,!t[l].callback&amp;&amp;(t[l].callback=n)}return new m(t,r)},ye.animate=function(t,r,i,n){var a=this;if(a.removed)return n&amp;&amp;n.call(a),a;var s=t instanceof m?t:e.animation(t,r,i,n);return b(s,a,s.percents[0],null,a.attr()),a},ye.setTime=function(t,e){return t&amp;&amp;null!=e&amp;&amp;this.status(t,G(e,t.ms)/t.ms),this},ye.status=function(t,e){var r=[],i=0,n,a;if(null!=e)return b(t,this,-1,G(e,1)),this;for(n=Ee.length;n&gt;i;i++)if(a=Ee[i],a.el.id==this.id&amp;&amp;(!t||a.anim==t)){if(t)return a.status;r.push({anim:a.anim,status:a.status})}return t?0:r},ye.pause=function(e){for(var r=0;r&lt;Ee.length;r++)Ee[r].el.id!=this.id||e&amp;&amp;Ee[r].anim!=e||t(&quot;raphael.anim.pause.&quot;+this.id,this,Ee[r].anim)!==!1&amp;&amp;(Ee[r].paused=!0);return this},ye.resume=function(e){for(var r=0;r&lt;Ee.length;r++)if(Ee[r].el.id==this.id&amp;&amp;(!e||Ee[r].anim==e)){var i=Ee[r];t(&quot;raphael.anim.resume.&quot;+this.id,this,i.anim)!==!1&amp;&amp;(delete i.paused,this.status(i.anim,i.status))}return this},ye.stop=function(e){for(var r=0;r&lt;Ee.length;r++)Ee[r].el.id!=this.id||e&amp;&amp;Ee[r].anim!=e||t(&quot;raphael.anim.stop.&quot;+this.id,this,Ee[r].anim)!==!1&amp;&amp;Ee.splice(r--,1);return this},t.on(&quot;raphael.remove&quot;,_),t.on(&quot;raphael.clear&quot;,_),ye.toString=function(){return&quot;Raphaël’s object&quot;};var ze=function(t){if(this.items=[],this.length=0,this.type=&quot;set&quot;,t)for(var e=0,r=t.length;r&gt;e;e++)!t[e]||t[e].constructor!=ye.constructor&amp;&amp;t[e].constructor!=ze||(this[this.items.length]=this.items[this.items.length]=t[e],this.length++)},Pe=ze.prototype;Pe.push=function(){for(var t,e,r=0,i=arguments.length;i&gt;r;r++)t=arguments[r],!t||t.constructor!=ye.constructor&amp;&amp;t.constructor!=ze||(e=this.items.length,this[e]=this.items[e]=t,this.length++);return this},Pe.pop=function(){return this.length&amp;&amp;delete this[this.length--],this.items.pop()},Pe.forEach=function(t,e){for(var r=0,i=this.items.length;i&gt;r;r++)if(t.call(e,this.items[r],r)===!1)return this;return this};for(var Fe in ye)ye[T](Fe)&amp;&amp;(Pe[Fe]=function(t){return function(){var e=arguments;return this.forEach(function(r){r[t][z](r,e)})}}(Fe));return Pe.attr=function(t,r){if(t&amp;&amp;e.is(t,Q)&amp;&amp;e.is(t[0],&quot;object&quot;))for(var i=0,n=t.length;n&gt;i;i++)this.items[i].attr(t[i]);else for(var a=0,s=this.items.length;s&gt;a;a++)this.items[a].attr(t,r);return this},Pe.clear=function(){for(;this.length;)this.pop()},Pe.splice=function(t,e,r){t=0&gt;t?W(this.length+t,0):t,e=W(0,G(this.length-t,e));var i=[],n=[],a=[],s;for(s=2;s&lt;arguments.length;s++)a.push(arguments[s]);for(s=0;e&gt;s;s++)n.push(this[t+s]);for(;s&lt;this.length-t;s++)i.push(this[t+s]);var o=a.length;for(s=0;s&lt;o+i.length;s++)this.items[t+s]=this[t+s]=o&gt;s?a[s]:i[s-o];for(s=this.items.length=this.length-=e-o;this[s];)delete this[s++];return new ze(n)},Pe.exclude=function(t){for(var e=0,r=this.length;r&gt;e;e++)if(this[e]==t)return this.splice(e,1),!0},Pe.animate=function(t,r,i,n){(e.is(i,&quot;function&quot;)||!i)&amp;&amp;(n=i||null);var a=this.items.length,s=a,o,l=this,h;if(!a)return this;n&amp;&amp;(h=function(){!--a&amp;&amp;n.call(l)}),i=e.is(i,Z)?i:h;var u=e.animation(t,r,i,h);for(o=this.items[--s].animate(u);s--;)this.items[s]&amp;&amp;!this.items[s].removed&amp;&amp;this.items[s].animateWith(o,u,u),this.items[s]&amp;&amp;!this.items[s].removed||a--;return this},Pe.insertAfter=function(t){for(var e=this.items.length;e--;)this.items[e].insertAfter(t);return this},Pe.getBBox=function(){for(var t=[],e=[],r=[],i=[],n=this.items.length;n--;)if(!this.items[n].removed){var a=this.items[n].getBBox();t.push(a.x),e.push(a.y),r.push(a.x+a.width),i.push(a.y+a.height)}return t=G[z](0,t),e=G[z](0,e),r=W[z](0,r),i=W[z](0,i),{x:t,y:e,x2:r,y2:i,width:r-t,height:i-e}},Pe.clone=function(t){t=this.paper.set();for(var e=0,r=this.items.length;r&gt;e;e++)t.push(this.items[e].clone());return t},Pe.toString=function(){return&quot;Raphaël‘s set&quot;},Pe.glow=function(t){var e=this.paper.set();return this.forEach(function(r,i){var n=r.glow(t);null!=n&amp;&amp;n.forEach(function(t,r){e.push(t)})}),e},Pe.isPointInside=function(t,e){var r=!1;return this.forEach(function(i){return i.isPointInside(t,e)?(r=!0,!1):void 0}),r},e.registerFont=function(t){if(!t.face)return t;this.fonts=this.fonts||{};var e={w:t.w,face:{},glyphs:{}},r=t.face[&quot;font-family&quot;];for(var i in t.face)t.face[T](i)&amp;&amp;(e.face[i]=t.face[i]);if(this.fonts[r]?this.fonts[r].push(e):this.fonts[r]=[e],!t.svg){e.face[&quot;units-per-em&quot;]=ut(t.face[&quot;units-per-em&quot;],10);for(var n in t.glyphs)if(t.glyphs[T](n)){var a=t.glyphs[n];if(e.glyphs[n]={w:a.w,k:{},d:a.d&amp;&amp;&quot;M&quot;+a.d.replace(/[mlcxtrv]/g,function(t){return{l:&quot;L&quot;,c:&quot;C&quot;,x:&quot;z&quot;,t:&quot;m&quot;,r:&quot;l&quot;,v:&quot;c&quot;}[t]||&quot;M&quot;})+&quot;z&quot;},a.k)for(var s in a.k)a[T](s)&amp;&amp;(e.glyphs[n].k[s]=a.k[s])}}return t},N.getFont=function(t,r,i,n){if(n=n||&quot;normal&quot;,i=i||&quot;normal&quot;,r=+r||{normal:400,bold:700,lighter:300,bolder:800}[r]||400,e.fonts){var a=e.fonts[t];if(!a){var s=new RegExp(&quot;(^|\\s)&quot;+t.replace(/[^\w\d\s+!~.:_-]/g,R)+&quot;(\\s|$)&quot;,&quot;i&quot;);for(var o in e.fonts)if(e.fonts[T](o)&amp;&amp;s.test(o)){a=e.fonts[o];break}}var l;if(a)for(var h=0,u=a.length;u&gt;h&amp;&amp;(l=a[h],l.face[&quot;font-weight&quot;]!=r||l.face[&quot;font-style&quot;]!=i&amp;&amp;l.face[&quot;font-style&quot;]||l.face[&quot;font-stretch&quot;]!=n);h++);return l}},N.print=function(t,r,i,n,a,s,o,l){s=s||&quot;middle&quot;,o=W(G(o||0,1),-1),l=W(G(l||1,3),1);var h=j(i)[q](R),u=0,c=0,f=R,p;if(e.is(n,&quot;string&quot;)&amp;&amp;(n=this.getFont(n)),n){p=(a||16)/n.face[&quot;units-per-em&quot;];for(var d=n.face.bbox[q](k),g=+d[0],x=d[3]-d[1],v=0,y=+d[1]+(&quot;baseline&quot;==s?x+ +n.face.descent:x/2),m=0,b=h.length;b&gt;m;m++){if(&quot;\n&quot;==h[m])u=0,w=0,c=0,v+=x*l;else{var _=c&amp;&amp;n.glyphs[h[m-1]]||{},w=n.glyphs[h[m]];u+=c?(_.w||n.w)+(_.k&amp;&amp;_.k[h[m]]||0)+n.w*o:0,c=1}w&amp;&amp;w.d&amp;&amp;(f+=e.transformPath(w.d,[&quot;t&quot;,u*p,v*p,&quot;s&quot;,p,p,g,y,&quot;t&quot;,(t-g)/p,(r-y)/p]))}}return this.path(f).attr({fill:&quot;#000&quot;,stroke:&quot;none&quot;})},N.add=function(t){if(e.is(t,&quot;array&quot;))for(var r=this.set(),i=0,n=t.length,a;n&gt;i;i++)a=t[i]||{},B[T](a.type)&amp;&amp;r.push(this[a.type]().attr(a));return r},e.format=function(t,r){var i=e.is(r,Q)?[0][P](r):arguments;return t&amp;&amp;e.is(t,Z)&amp;&amp;i.length-1&amp;&amp;(t=t.replace(C,function(t,e){return null==i[++e]?R:i[e]})),t||R},e.fullfill=function(){var t=/\{([^\}]+)\}/g,e=/(?:(?:^|\.)(.+?)(?=\[|\.|$|\()|\[('|&quot;)(.+?)\2\])(\(\))?/g,r=function(t,r,i){var n=i;return r.replace(e,function(t,e,r,i,a){e=e||i,n&amp;&amp;(e in n&amp;&amp;(n=n[e]),&quot;function&quot;==typeof n&amp;&amp;a&amp;&amp;(n=n()))}),n=(null==n||n==i?t:n)+&quot;&quot;};return function(e,i){return String(e).replace(t,function(t,e){return r(t,e,i)})}}(),e.ninja=function(){if(E.was)A.win.Raphael=E.is;else{window.Raphael=void 0;try{delete window.Raphael}catch(t){}}return e},e.st=Pe,t.on(&quot;raphael.DOMload&quot;,function(){w=!0}),function(t,r,i){function n(){/in/.test(t.readyState)?setTimeout(n,9):e.eve(&quot;raphael.DOMload&quot;)}null==t.readyState&amp;&amp;t.addEventListener&amp;&amp;(t.addEventListener(r,i=function(){t.removeEventListener(r,i,!1),t.readyState=&quot;complete&quot;},!1),t.readyState=&quot;loading&quot;),n()}(document,&quot;DOMContentLoaded&quot;),e}.apply(e,i),!(void 0!==n&amp;&amp;(t.exports=n))},function(t,e,r){var i,n;!function(r){var a=&quot;0.4.2&quot;,s=&quot;hasOwnProperty&quot;,o=/[\.\/]/,l=&quot;*&quot;,h=function(){},u=function(t,e){return t-e},c,f,p={n:{}},d=function(t,e){t=String(t);var r=p,i=f,n=Array.prototype.slice.call(arguments,2),a=d.listeners(t),s=0,o=!1,l,h=[],g={},x=[],v=c,y=[];c=t,f=0;for(var m=0,b=a.length;b&gt;m;m++)&quot;zIndex&quot;in a[m]&amp;&amp;(h.push(a[m].zIndex),a[m].zIndex&lt;0&amp;&amp;(g[a[m].zIndex]=a[m]));for(h.sort(u);h[s]&lt;0;)if(l=g[h[s++]],x.push(l.apply(e,n)),f)return f=i,x;for(m=0;b&gt;m;m++)if(l=a[m],&quot;zIndex&quot;in l)if(l.zIndex==h[s]){if(x.push(l.apply(e,n)),f)break;do if(s++,l=g[h[s]],l&amp;&amp;x.push(l.apply(e,n)),f)break;while(l)}else g[l.zIndex]=l;else if(x.push(l.apply(e,n)),f)break;return f=i,c=v,x.length?x:null};d._events=p,d.listeners=function(t){var e=t.split(o),r=p,i,n,a,s,h,u,c,f,d=[r],g=[];for(s=0,h=e.length;h&gt;s;s++){for(f=[],u=0,c=d.length;c&gt;u;u++)for(r=d[u].n,n=[r[e[s]],r[l]],a=2;a--;)i=n[a],i&amp;&amp;(f.push(i),g=g.concat(i.f||[]));d=f}return g},d.on=function(t,e){if(t=String(t),&quot;function&quot;!=typeof e)return function(){};for(var r=t.split(o),i=p,n=0,a=r.length;a&gt;n;n++)i=i.n,i=i.hasOwnProperty(r[n])&amp;&amp;i[r[n]]||(i[r[n]]={n:{}});for(i.f=i.f||[],n=0,a=i.f.length;a&gt;n;n++)if(i.f[n]==e)return h;return i.f.push(e),function(t){+t==+t&amp;&amp;(e.zIndex=+t)}},d.f=function(t){var e=[].slice.call(arguments,1);return function(){d.apply(null,[t,null].concat(e).concat([].slice.call(arguments,0)))}},d.stop=function(){f=1},d.nt=function(t){return t?new RegExp(&quot;(?:\\.|\\/|^)&quot;+t+&quot;(?:\\.|\\/|$)&quot;).test(c):c},d.nts=function(){return c.split(o)},d.off=d.unbind=function(t,e){if(!t)return void(d._events=p={n:{}});var r=t.split(o),i,n,a,h,u,c,f,g=[p];for(h=0,u=r.length;u&gt;h;h++)for(c=0;c&lt;g.length;c+=a.length-2){if(a=[c,1],i=g[c].n,r[h]!=l)i[r[h]]&amp;&amp;a.push(i[r[h]]);else for(n in i)i[s](n)&amp;&amp;a.push(i[n]);g.splice.apply(g,a)}for(h=0,u=g.length;u&gt;h;h++)for(i=g[h];i.n;){if(e){if(i.f){for(c=0,f=i.f.length;f&gt;c;c++)if(i.f[c]==e){i.f.splice(c,1);break}!i.f.length&amp;&amp;delete i.f}for(n in i.n)if(i.n[s](n)&amp;&amp;i.n[n].f){var x=i.n[n].f;for(c=0,f=x.length;f&gt;c;c++)if(x[c]==e){x.splice(c,1);break}!x.length&amp;&amp;delete i.n[n].f}}else{delete i.f;for(n in i.n)i.n[s](n)&amp;&amp;i.n[n].f&amp;&amp;delete i.n[n].f}i=i.n}},d.once=function(t,e){var r=function(){return d.unbind(t,r),e.apply(this,arguments)};return d.on(t,r)},d.version=a,d.toString=function(){return&quot;You are running Eve &quot;+a},&quot;undefined&quot;!=typeof t&amp;&amp;t.exports?t.exports=d:(i=[],n=function(){return d}.apply(e,i),!(void 0!==n&amp;&amp;(t.exports=n)))}(this)},function(t,e,r){var i,n;i=[r(1)],n=function(t){if(!t||t.svg){var e=&quot;hasOwnProperty&quot;,r=String,i=parseFloat,n=parseInt,a=Math,s=a.max,o=a.abs,l=a.pow,h=/[, ]+/,u=t.eve,c=&quot;&quot;,f=&quot; &quot;,p=&quot;http://www.w3.org/1999/xlink&quot;,d={block:&quot;M5,0 0,2.5 5,5z&quot;,classic:&quot;M5,0 0,2.5 5,5 3.5,3 3.5,2z&quot;,diamond:&quot;M2.5,0 5,2.5 2.5,5 0,2.5z&quot;,open:&quot;M6,1 1,3.5 6,6&quot;,oval:&quot;M2.5,0A2.5,2.5,0,0,1,2.5,5 2.5,2.5,0,0,1,2.5,0z&quot;},g={};t.toString=function(){return&quot;Your browser supports SVG.\nYou are running Raphaël &quot;+this.version};var x=function(i,n){if(n){&quot;string&quot;==typeof i&amp;&amp;(i=x(i));for(var a in n)n[e](a)&amp;&amp;(&quot;xlink:&quot;==a.substring(0,6)?i.setAttributeNS(p,a.substring(6),r(n[a])):i.setAttribute(a,r(n[a])))}else i=t._g.doc.createElementNS(&quot;http://www.w3.org/2000/svg&quot;,i),i.style&amp;&amp;(i.style.webkitTapHighlightColor=&quot;rgba(0,0,0,0)&quot;);return i},v=function(e,n){var h=&quot;linear&quot;,u=e.id+n,f=.5,p=.5,d=e.node,g=e.paper,v=d.style,y=t._g.doc.getElementById(u);if(!y){if(n=r(n).replace(t._radial_gradient,function(t,e,r){if(h=&quot;radial&quot;,e&amp;&amp;r){f=i(e),p=i(r);var n=2*(p&gt;.5)-1;l(f-.5,2)+l(p-.5,2)&gt;.25&amp;&amp;(p=a.sqrt(.25-l(f-.5,2))*n+.5)&amp;&amp;.5!=p&amp;&amp;(p=p.toFixed(5)-1e-5*n)}return c}),n=n.split(/\s*\-\s*/),&quot;linear&quot;==h){var b=n.shift();if(b=-i(b),isNaN(b))return null;var _=[0,0,a.cos(t.rad(b)),a.sin(t.rad(b))],w=1/(s(o(_[2]),o(_[3]))||1);_[2]*=w,_[3]*=w,_[2]&lt;0&amp;&amp;(_[0]=-_[2],_[2]=0),_[3]&lt;0&amp;&amp;(_[1]=-_[3],_[3]=0)}var k=t._parseDots(n);if(!k)return null;if(u=u.replace(/[\(\)\s,\xb0#]/g,&quot;_&quot;),e.gradient&amp;&amp;u!=e.gradient.id&amp;&amp;(g.defs.removeChild(e.gradient),delete e.gradient),!e.gradient){y=x(h+&quot;Gradient&quot;,{id:u}),e.gradient=y,x(y,&quot;radial&quot;==h?{fx:f,fy:p}:{x1:_[0],y1:_[1],x2:_[2],y2:_[3],gradientTransform:e.matrix.invert()}),g.defs.appendChild(y);for(var B=0,C=k.length;C&gt;B;B++)y.appendChild(x(&quot;stop&quot;,{offset:k[B].offset?k[B].offset:B?&quot;100%&quot;:&quot;0%&quot;,&quot;stop-color&quot;:k[B].color||&quot;#fff&quot;,&quot;stop-opacity&quot;:isFinite(k[B].opacity)?k[B].opacity:1}))}}return x(d,{fill:m(u),opacity:1,&quot;fill-opacity&quot;:1}),v.fill=c,v.opacity=1,v.fillOpacity=1,1},y=function(){var t=document.documentMode;return t&amp;&amp;(9===t||10===t)},m=function(t){if(true)return&quot;url('#&quot;+t+&quot;')&quot;;var e=document.location,r=e.protocol+&quot;//&quot;+e.host+e.pathname+e.search;return&quot;url('&quot;+r+&quot;#&quot;+t+&quot;')&quot;},b=function(t){var e=t.getBBox(1);x(t.pattern,{patternTransform:t.matrix.invert()+&quot; translate(&quot;+e.x+&quot;,&quot;+e.y+&quot;)&quot;})},_=function(i,n,a){if(&quot;path&quot;==i.type){for(var s=r(n).toLowerCase().split(&quot;-&quot;),o=i.paper,l=a?&quot;end&quot;:&quot;start&quot;,h=i.node,u=i.attrs,f=u[&quot;stroke-width&quot;],p=s.length,v=&quot;classic&quot;,y,m,b,_,w,k=3,B=3,C=5;p--;)switch(s[p]){case&quot;block&quot;:case&quot;classic&quot;:case&quot;oval&quot;:case&quot;diamond&quot;:case&quot;open&quot;:case&quot;none&quot;:v=s[p];break;case&quot;wide&quot;:B=5;break;case&quot;narrow&quot;:B=2;break;case&quot;long&quot;:k=5;break;case&quot;short&quot;:k=2}if(&quot;open&quot;==v?(k+=2,B+=2,C+=2,b=1,_=a?4:1,w={fill:&quot;none&quot;,stroke:u.stroke}):(_=b=k/2,w={fill:u.stroke,stroke:&quot;none&quot;}),i._.arrows?a?(i._.arrows.endPath&amp;&amp;g[i._.arrows.endPath]--,i._.arrows.endMarker&amp;&amp;g[i._.arrows.endMarker]--):(i._.arrows.startPath&amp;&amp;g[i._.arrows.startPath]--,i._.arrows.startMarker&amp;&amp;g[i._.arrows.startMarker]--):i._.arrows={},&quot;none&quot;!=v){var S=&quot;raphael-marker-&quot;+v,T=&quot;raphael-marker-&quot;+l+v+k+B+&quot;-obj&quot;+i.id;t._g.doc.getElementById(S)?g[S]++:(o.defs.appendChild(x(x(&quot;path&quot;),{&quot;stroke-linecap&quot;:&quot;round&quot;,d:d[v],id:S})),g[S]=1);var A=t._g.doc.getElementById(T),E;A?(g[T]++,E=A.getElementsByTagName(&quot;use&quot;)[0]):(A=x(x(&quot;marker&quot;),{id:T,markerHeight:B,markerWidth:k,orient:&quot;auto&quot;,refX:_,refY:B/2}),E=x(x(&quot;use&quot;),{&quot;xlink:href&quot;:&quot;#&quot;+S,transform:(a?&quot;rotate(180 &quot;+k/2+&quot; &quot;+B/2+&quot;) &quot;:c)+&quot;scale(&quot;+k/C+&quot;,&quot;+B/C+&quot;)&quot;,&quot;stroke-width&quot;:(1/((k/C+B/C)/2)).toFixed(4)}),A.appendChild(E),o.defs.appendChild(A),g[T]=1),x(E,w);var M=b*(&quot;diamond&quot;!=v&amp;&amp;&quot;oval&quot;!=v);a?(y=i._.arrows.startdx*f||0,m=t.getTotalLength(u.path)-M*f):(y=M*f,m=t.getTotalLength(u.path)-(i._.arrows.enddx*f||0)),w={},w[&quot;marker-&quot;+l]=&quot;url(#&quot;+T+&quot;)&quot;,(m||y)&amp;&amp;(w.d=t.getSubpath(u.path,y,m)),x(h,w),i._.arrows[l+&quot;Path&quot;]=S,i._.arrows[l+&quot;Marker&quot;]=T,i._.arrows[l+&quot;dx&quot;]=M,i._.arrows[l+&quot;Type&quot;]=v,i._.arrows[l+&quot;String&quot;]=n}else a?(y=i._.arrows.startdx*f||0,m=t.getTotalLength(u.path)-y):(y=0,m=t.getTotalLength(u.path)-(i._.arrows.enddx*f||0)),i._.arrows[l+&quot;Path&quot;]&amp;&amp;x(h,{d:t.getSubpath(u.path,y,m)}),delete i._.arrows[l+&quot;Path&quot;],delete i._.arrows[l+&quot;Marker&quot;],delete i._.arrows[l+&quot;dx&quot;],delete i._.arrows[l+&quot;Type&quot;],delete i._.arrows[l+&quot;String&quot;];for(w in g)if(g[e](w)&amp;&amp;!g[w]){var N=t._g.doc.getElementById(w);N&amp;&amp;N.parentNode.removeChild(N)}}},w={&quot;-&quot;:[3,1],&quot;.&quot;:[1,1],&quot;-.&quot;:[3,1,1,1],&quot;-..&quot;:[3,1,1,1,1,1],&quot;. &quot;:[1,3],&quot;- &quot;:[4,3],&quot;--&quot;:[8,3],&quot;- .&quot;:[4,3,1,3],&quot;--.&quot;:[8,3,1,3],&quot;--..&quot;:[8,3,1,3,1,3]},k=function(t,e,i){if(e=w[r(e).toLowerCase()]){for(var n=t.attrs[&quot;stroke-width&quot;]||&quot;1&quot;,a={round:n,square:n,butt:0}[t.attrs[&quot;stroke-linecap&quot;]||i[&quot;stroke-linecap&quot;]]||0,s=[],o=e.length;o--;)s[o]=e[o]*n+(o%2?1:-1)*a;x(t.node,{&quot;stroke-dasharray&quot;:s.join(&quot;,&quot;)})}else x(t.node,{&quot;stroke-dasharray&quot;:&quot;none&quot;})},B=function(i,a){var l=i.node,u=i.attrs,f=l.style.visibility;l.style.visibility=&quot;hidden&quot;;for(var d in a)if(a[e](d)){if(!t._availableAttrs[e](d))continue;var g=a[d];switch(u[d]=g,d){case&quot;blur&quot;:i.blur(g);break;case&quot;title&quot;:var y=l.getElementsByTagName(&quot;title&quot;);if(y.length&amp;&amp;(y=y[0]))y.firstChild.nodeValue=g;else{y=x(&quot;title&quot;);var m=t._g.doc.createTextNode(g);y.appendChild(m),l.appendChild(y)}break;case&quot;href&quot;:case&quot;target&quot;:var w=l.parentNode;if(&quot;a&quot;!=w.tagName.toLowerCase()){var B=x(&quot;a&quot;);w.insertBefore(B,l),B.appendChild(l),w=B}&quot;target&quot;==d?w.setAttributeNS(p,&quot;show&quot;,&quot;blank&quot;==g?&quot;new&quot;:g):w.setAttributeNS(p,d,g);break;case&quot;cursor&quot;:l.style.cursor=g;break;case&quot;transform&quot;:i.transform(g);break;case&quot;arrow-start&quot;:_(i,g);break;case&quot;arrow-end&quot;:_(i,g,1);break;case&quot;clip-rect&quot;:var C=r(g).split(h);if(4==C.length){i.clip&amp;&amp;i.clip.parentNode.parentNode.removeChild(i.clip.parentNode);var T=x(&quot;clipPath&quot;),A=x(&quot;rect&quot;);T.id=t.createUUID(),x(A,{x:C[0],y:C[1],width:C[2],height:C[3]}),T.appendChild(A),i.paper.defs.appendChild(T),x(l,{&quot;clip-path&quot;:&quot;url(#&quot;+T.id+&quot;)&quot;}),i.clip=A}if(!g){var E=l.getAttribute(&quot;clip-path&quot;);if(E){var M=t._g.doc.getElementById(E.replace(/(^url\(#|\)$)/g,c));M&amp;&amp;M.parentNode.removeChild(M),x(l,{&quot;clip-path&quot;:c}),delete i.clip}}break;case&quot;path&quot;:&quot;path&quot;==i.type&amp;&amp;(x(l,{d:g?u.path=t._pathToAbsolute(g):&quot;M0,0&quot;}),i._.dirty=1,i._.arrows&amp;&amp;(&quot;startString&quot;in i._.arrows&amp;&amp;_(i,i._.arrows.startString),&quot;endString&quot;in i._.arrows&amp;&amp;_(i,i._.arrows.endString,1)));break;case&quot;width&quot;:if(l.setAttribute(d,g),i._.dirty=1,!u.fx)break;d=&quot;x&quot;,g=u.x;case&quot;x&quot;:u.fx&amp;&amp;(g=-u.x-(u.width||0));case&quot;rx&quot;:if(&quot;rx&quot;==d&amp;&amp;&quot;rect&quot;==i.type)break;case&quot;cx&quot;:l.setAttribute(d,g),i.pattern&amp;&amp;b(i),i._.dirty=1;break;case&quot;height&quot;:if(l.setAttribute(d,g),i._.dirty=1,!u.fy)break;d=&quot;y&quot;,g=u.y;case&quot;y&quot;:u.fy&amp;&amp;(g=-u.y-(u.height||0));case&quot;ry&quot;:if(&quot;ry&quot;==d&amp;&amp;&quot;rect&quot;==i.type)break;case&quot;cy&quot;:l.setAttribute(d,g),i.pattern&amp;&amp;b(i),i._.dirty=1;break;case&quot;r&quot;:&quot;rect&quot;==i.type?x(l,{rx:g,ry:g}):l.setAttribute(d,g),i._.dirty=1;break;case&quot;src&quot;:&quot;image&quot;==i.type&amp;&amp;l.setAttributeNS(p,&quot;href&quot;,g);break;case&quot;stroke-width&quot;:1==i._.sx&amp;&amp;1==i._.sy||(g/=s(o(i._.sx),o(i._.sy))||1),l.setAttribute(d,g),u[&quot;stroke-dasharray&quot;]&amp;&amp;k(i,u[&quot;stroke-dasharray&quot;],a),i._.arrows&amp;&amp;(&quot;startString&quot;in i._.arrows&amp;&amp;_(i,i._.arrows.startString),&quot;endString&quot;in i._.arrows&amp;&amp;_(i,i._.arrows.endString,1));break;case&quot;stroke-dasharray&quot;:k(i,g,a);break;case&quot;fill&quot;:var N=r(g).match(t._ISURL);if(N){T=x(&quot;pattern&quot;);var L=x(&quot;image&quot;);T.id=t.createUUID(),x(T,{x:0,y:0,patternUnits:&quot;userSpaceOnUse&quot;,height:1,width:1}),x(L,{x:0,y:0,&quot;xlink:href&quot;:N[1]}),T.appendChild(L),function(e){t._preload(N[1],function(){var t=this.offsetWidth,r=this.offsetHeight;x(e,{width:t,height:r}),x(L,{width:t,height:r})})}(T),i.paper.defs.appendChild(T),x(l,{fill:&quot;url(#&quot;+T.id+&quot;)&quot;}),i.pattern=T,i.pattern&amp;&amp;b(i);break}var z=t.getRGB(g);if(z.error){if((&quot;circle&quot;==i.type||&quot;ellipse&quot;==i.type||&quot;r&quot;!=r(g).charAt())&amp;&amp;v(i,g)){
+if(&quot;opacity&quot;in u||&quot;fill-opacity&quot;in u){var P=t._g.doc.getElementById(l.getAttribute(&quot;fill&quot;).replace(/^url\(#|\)$/g,c));if(P){var F=P.getElementsByTagName(&quot;stop&quot;);x(F[F.length-1],{&quot;stop-opacity&quot;:(&quot;opacity&quot;in u?u.opacity:1)*(&quot;fill-opacity&quot;in u?u[&quot;fill-opacity&quot;]:1)})}}u.gradient=g,u.fill=&quot;none&quot;;break}}else delete a.gradient,delete u.gradient,!t.is(u.opacity,&quot;undefined&quot;)&amp;&amp;t.is(a.opacity,&quot;undefined&quot;)&amp;&amp;x(l,{opacity:u.opacity}),!t.is(u[&quot;fill-opacity&quot;],&quot;undefined&quot;)&amp;&amp;t.is(a[&quot;fill-opacity&quot;],&quot;undefined&quot;)&amp;&amp;x(l,{&quot;fill-opacity&quot;:u[&quot;fill-opacity&quot;]});z[e](&quot;opacity&quot;)&amp;&amp;x(l,{&quot;fill-opacity&quot;:z.opacity&gt;1?z.opacity/100:z.opacity});case&quot;stroke&quot;:z=t.getRGB(g),l.setAttribute(d,z.hex),&quot;stroke&quot;==d&amp;&amp;z[e](&quot;opacity&quot;)&amp;&amp;x(l,{&quot;stroke-opacity&quot;:z.opacity&gt;1?z.opacity/100:z.opacity}),&quot;stroke&quot;==d&amp;&amp;i._.arrows&amp;&amp;(&quot;startString&quot;in i._.arrows&amp;&amp;_(i,i._.arrows.startString),&quot;endString&quot;in i._.arrows&amp;&amp;_(i,i._.arrows.endString,1));break;case&quot;gradient&quot;:(&quot;circle&quot;==i.type||&quot;ellipse&quot;==i.type||&quot;r&quot;!=r(g).charAt())&amp;&amp;v(i,g);break;case&quot;opacity&quot;:"></div>

@@ -159,27 +159,53 @@ SET `validated` = 1,
 WHERE `officialEmail` = 'mularas78@gmail.com';
 SQL
 
-echo "Checking sample student group yft7zkqt..."
-SAMPLE_GROUP_ROW=$(mysql -ubebras -pbebras -h127.0.0.1 beaver_contest -N -e "SELECT CONCAT_WS(' | ', ID, name, contestID, code, password, isPublic) FROM \`group\` WHERE code = 'yft7zkqt' LIMIT 1;" || true)
+echo "Checking required Render demo assets..."
+REQUIRED_DEMO_FILES=(
+  "contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/contest_56.js"
+  "contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/contest_56.html"
+  "teacherInterface/bebras-tasks/_common/modules/img/castor.png"
+  "teacherInterface/bebras-tasks/_common/modules/bundles/bebras-interface.js"
+)
 
-if [ -z "$SAMPLE_GROUP_ROW" ]; then
-  echo "Sample student group yft7zkqt is missing; trying to add it for contest 56."
-  mysql -ubebras -pbebras -h127.0.0.1 beaver_contest <<'SQL'
-SET @sample_group_code = 'yft7zkqt';
-SET @sample_group_password = 'zfvaxswk';
-SET @sample_group_id = (
+for required_file in "${REQUIRED_DEMO_FILES[@]}"; do
+  if [ ! -f "$required_file" ]; then
+    echo "Missing required Render demo asset: $required_file" >&2
+    exit 1
+  fi
+done
+
+echo "Normalizing Render demo contest data..."
+mysql -ubebras -pbebras -h127.0.0.1 beaver_contest <<'SQL'
+SET @demo_contest_id = 56;
+SET @demo_contest_folder = '2015_castor_ajakjtxnasj.1778420233';
+SET @demo_group_code = 'yft7zkqt';
+SET @demo_group_password = 'zfvaxswk';
+
+UPDATE `contest`
+SET `folder` = @demo_contest_folder,
+    `open` = 'Open',
+    `visibility` = 'Visible',
+    `newInterface` = 1,
+    `fullFeedback` = 1,
+    `showTotalScore` = 1,
+    `nbUnlockedTasksInitial` = 4
+WHERE `ID` = @demo_contest_id;
+
+SET @demo_group_id = (
   SELECT `ID`
   FROM `group`
-  WHERE `code` = @sample_group_code
+  WHERE `code` = @demo_group_code
   LIMIT 1
 );
-SET @sample_group_password_id = (
+SET @fallback_demo_group_id = (
   SELECT `ID`
   FROM `group`
-  WHERE `password` = @sample_group_password
+  WHERE `code` = CONCAT('#', @demo_group_code)
   LIMIT 1
 );
-SET @new_sample_group_id = (
+SET @demo_group_id = COALESCE(@demo_group_id, @fallback_demo_group_id);
+
+SET @new_demo_group_id = (
   SELECT CASE
     WHEN COUNT(*) = 0 THEN 796142003655934888
     WHEN SUM(`ID` = 796142003655934888) = 0 THEN 796142003655934888
@@ -215,7 +241,7 @@ INSERT INTO `group` (
   `iVersion`
 )
 SELECT
-  @new_sample_group_id,
+  @new_demo_group_id,
   1358,
   12,
   '',
@@ -229,8 +255,8 @@ SELECT
   '',
   '',
   NULL,
-  @sample_group_code,
-  @sample_group_password,
+  @demo_group_code,
+  @demo_group_password,
   '2015-12-10 22:00:00',
   NOW(),
   0,
@@ -239,20 +265,33 @@ SELECT
   0,
   'Unofficial',
   0
-WHERE @sample_group_id IS NULL
-  AND @sample_group_password_id IS NULL
-  AND EXISTS (SELECT 1 FROM `contest` WHERE `ID` = 56);
+WHERE @demo_group_id IS NULL
+  AND EXISTS (SELECT 1 FROM `contest` WHERE `ID` = @demo_contest_id);
+
+UPDATE `group`
+SET `code` = @demo_group_code,
+    `password` = @demo_group_password,
+    `contestID` = @demo_contest_id,
+    `name` = 'Castor 2015 : tous les niveaux',
+    `nbStudents` = 100000,
+    `expectedStartTime` = '2015-12-10 22:00:00',
+    `startTime` = NOW(),
+    `isPublic` = 1,
+    `isGenerated` = 0,
+    `bRecovered` = 0,
+    `participationType` = 'Unofficial',
+    `minCategory` = '',
+    `maxCategory` = '',
+    `language` = ''
+WHERE (`ID` = @demo_group_id AND @demo_group_id IS NOT NULL)
+   OR `code` = @demo_group_code;
+
+UPDATE `group`
+SET `isPublic` = 0
+WHERE `code` <> @demo_group_code;
 SQL
-  SAMPLE_GROUP_ROW=$(mysql -ubebras -pbebras -h127.0.0.1 beaver_contest -N -e "SELECT CONCAT_WS(' | ', ID, name, contestID, code, password, isPublic) FROM \`group\` WHERE code = 'yft7zkqt' LIMIT 1;" || true)
-fi
 
-if [ -n "$SAMPLE_GROUP_ROW" ]; then
-  echo "Sample student group: $SAMPLE_GROUP_ROW"
-else
-  echo "Sample student group yft7zkqt is missing; contest 56 may not be available after import."
-fi
-
-echo "Sample student group query result:"
+echo "Render demo student group query result:"
 mysql -ubebras -pbebras -h127.0.0.1 beaver_contest -e "SELECT ID, name, contestID, code, password, isPublic FROM \`group\` WHERE code = 'yft7zkqt';" || echo "Sample student group query failed."
 
 echo "Configuring Apache for Render PORT..."

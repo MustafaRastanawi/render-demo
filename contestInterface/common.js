@@ -1490,9 +1490,7 @@ var TimeManager = {
 window.selectMainTab = function(tabName) {
    if (tabName == 'home') {
       $("#publicContestExplanation").html(t("tab_public_contests_score_explanation"));
-      //loadPublicGroups(); We don't use this feature anymore, we create this page manually.
-      $("#loadPublicGroups").hide();
-      $("#contentPublicGroups").show();
+      loadPublicGroups();
   }
    var tabNames = ["school", "home", "continue", "contests"];
    for(var iTab = 0; iTab < tabNames.length; iTab++) {

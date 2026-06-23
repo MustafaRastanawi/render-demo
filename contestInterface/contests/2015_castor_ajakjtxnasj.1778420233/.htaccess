@@ -1,0 +1,6 @@
+<Files "contest_56_sols.html">
+	Deny from all
+</Files>
+<Files "bebras.js">
+	Deny from all
+</Files>

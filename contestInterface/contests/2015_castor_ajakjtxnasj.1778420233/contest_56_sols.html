@@ -1,0 +1,665 @@
+<!doctype html>
+<div id="solution-2015-JP-04-crane-operating" class="solution">
+<style></style>
+
+         <h2>Solution</h2>
+            <div class="easy">
+               <p>Pour échanger les positions du bloc rouge et du bloc bleu, il faut forcément commencer par en placer un des deux sur la case disponible au milieu. </p>
+               <p>Par exemple, en appuyant dans l'ordre sur les boutons numérotés: <b>1 2, 3 1, 2 3</b>, on obtient le résultat souhaité, comme illustré ci-dessous.</p>
+               <table width="100%">
+               <!--<tr><td>Etape 1</td><td>Etape 2</td><td>Etape 3</td><td>Etape 4</td><td>Etape 5</td><td>Etape 6</td>
+               </tr>-->
+               <tbody><tr>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/easy_stage1.png" height="130"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/easy_stage2.png" height="130"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/easy_stage3.png" height="130"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/easy_stage4.png" height="130"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/easy_stage5.png" height="130"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/easy_stage6.png" height="130"></td>
+               </tr>
+               </tbody></table>
+               
+            </div>
+            <div class="medium">
+               <p>Une solution consiste à commencer par libérer une place, puis à décaler chacun des autres blocs pour les ranger à leur place, et enfin placer le premier bloc manipulé à sa place. 
+               </p>
+
+               <table width="100%"><tbody><tr>
+               <td style="vertical-align:top"><b>Etape 1 :</b> libérer une place temporaire en déplaçant le bloc rouge.</td>
+               <td style="vertical-align:top"><b>Etape 2 :</b> décaler les autres blocs vers la gauche.</td>
+               <td style="vertical-align:top"><b>Etape 3 :</b> ranger le premier bloc déplacé à sa place.</td>
+               </tr>
+               <tr>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/medium_stage1.png" height="130"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/medium_stage2.png" height="130"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/medium_stage3.png" height="130"></td>
+               </tr>
+               </tbody></table>
+
+               <p>Cette approche correspond à la séquence <b>2 1, 3 2, 4 3, 5 4, 6 5, 7 6, 1 7</b>. D'autres séquences étaient possibles.</p>
+
+            </div>
+            <div class="hard">
+
+               <p>Une solution consiste à commencer par libérer une place, puis on répète le principe suivant : à chaque étape, on déplace un bloc de la bonne couleur vers la place libre. On évite le plus possible de déplacer des blocs qui sont déjà à leur place finale. On évite également de déplacer le premier bloc qui a servi à libérer la première place, sauf tout à la fin.</p>
+               <p>En procédant ainsi, chaque bloc est déplacé exactement une fois, sauf le premier qui est déplacé deux fois. Il n'est pas possible de faire moins de déplacements.</p>
+
+               <table width="100%">
+               <tbody><tr>
+               <td style="vertical-align:top">Etape 1</td>
+               <td style="vertical-align:top">Etape 2 (1)</td>
+               <td style="vertical-align:top">Etape 2  (2)</td>
+               </tr>
+               <tr>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/hard_stage1.png" height="130"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/hard_stage2.png" height="130"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/hard_stage3.png" height="130"></td>
+               </tr>
+               <tr>
+               <td style="vertical-align:top">Etape 2  (3)</td>
+               <td style="vertical-align:top">Etape 2  (4)</td>
+               <td style="vertical-align:top">Etape 2  (5)</td>
+               </tr><tr>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/hard_stage4.png" height="130"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/hard_stage5.png" height="130"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/hard_stage6.png" height="130"></td>
+               </tr>
+               <tr>
+               <td style="vertical-align:top">Etape 3</td>
+               <td style="vertical-align:top">Résultat</td>
+               <td style="vertical-align:top"></td>
+               </tr>
+               <tr>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/hard_stage7.png" height="130"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/hard_stage8.png" height="130"></td>
+               <td>&nbsp;</td>
+               </tr>
+               </tbody></table>
+
+               <p>Cette approche correspond à la séquence <b>2 1, 4 2, 5 4, 3 5, 7 3, 6 7, 1 6</b>. D'autres séquences étaient possibles.</p>
+
+           </div>
+         <h2>C'est de l'informatique !</h2>
+            <p>Lorsqu'on enregistre un fichier sur le disque dur, il n'est pas toujours possible d'écrire l'ensemble de ce fichier à un seul endroit du disque. Il faut alors écrire des morceaux du fichier à plusieurs endroits.
+            </p>
+            <p></p>Par ailleurs, lorsqu'on ajoute des données à un fichier existant, il se peut qu'il y ait déjà un fichier qui se trouve juste après sur le disque dur. Dans ce, il n'est pas efficace de déplacer les fichiers, qui peuvent être très gros, alors qu'il suffit d'écrire les données à ajouter ailleurs sur le disque dur.
+            <p></p>
+            <p>Dans les deux cas, on se retrouve avec des morceaux d'un même fichier répartis à plusieurs endroits sur le disque dur. Ce phénomène s'appelle la <b>fragmentation</b>. Lorsque la fragmentation est trop importante, cela nuit aux performances du système, car pour lire un fichier en entier, il faut sauter d'un endroit à l'autre du disque, et cela prend du temps.</p>
+            <p>Il peut être nécessaire de <b>défragmenter</b> le disque dur. Cette opération consiste à remettre les morceaux d'un même fichier à côté les uns des autres.  Pour réaliser cette opération efficacement, il faut déplacer des morceaux de fichiers de manière astucieuse, afin de minimiser le nombre de déplacement, un peu comme on le fait dans ce sujet.</p>
+
+
+	  </div>
+<div id="javascript-solution-2015-JP-04-crane-operating" data-content=""></div>
+<div id="solution-2015-CZ-02-relationships" class="solution">
+<style></style>
+         <h2>Solution</h2> 
+         <div class="easy medium" style="display: block;">
+            <p>Pour obtenir la solution, on place les personnes une par une par ordre d'âge, intuitivement « en suivant l'ordre des flèches ». Plus précisément, on remplit à chaque fois une case vérifiant la propriété suivante : s'il y a des flèches qui arrivent à cette case, alors les cases d'où viennent les flèches sont déjà remplies. </p>
+         </div>
+         <div class="easy" style="display: block;">
+            <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-CZ-02-relationships/solution_easy.png">
+            <!--<p> Observez que sur le schéma obtenu, il y a trois flèches entre Julie, Ahmed et Sarah. Elles expriment que  "Julie est plus jeune que Ahmed", "Ahmed est plus jeune que Sarah", et "Julie est plus jeune que Sarah". </p>-->
+         </div>
+         <div class="medium" style="display: none;">
+            <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-CZ-02-relationships/solution_medium.png">
+             <!---<p>La relation "est plus jeune que" est transitive.  Si "Julie est plus jeune que Ahmed" et "Ahmed est plus jeune que Sarah", alors, par transitivité, "Julie est plus jeune que Sarah". Certaines flèches du schéma obtenu décrivent les trois propositions.</p>-->
+        </div>   
+        <div class="hard" style="display: none;">      
+           <img style="float:right" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-CZ-02-relationships/graphe_cycles.png">
+           <p>Le schéma avec des flèches représente ce que l'on appelle un « graphe ». </p>
+           <p>Ce graphe représente des suites de de flèches qui tournent en rond, que l'on appelle des « cycles »</p>
+           <p>Dans le graphe considéré, il y a deux cycles : le cycle rouge (passant par les cases marquées B, C, et E), et le cycle bleu (passant par les cases marquées A, C, E, et D).</p>
+           <p>Sur un cycle, il n'est pas possible de mettre une personne sur chacune des cases, sinon forcément une des relations d'âges ne sera pas respectée. Donc, sur chacun des deux cycles, il faut qu'il y ait impérativement au moins une case vide.</p>
+           <p>Comme on ne peut laisser qu'une seule case vide, il faut que cette case se trouve sur les deux cycles à la fois. La case vide est donc soit E (solution 1), soit C (solution 2).</p>
+          
+            <center>
+            <table>
+            <tbody><tr>
+            <td><b>Solution 1 :</b></td>
+            <td><b>Solution 2 :</b></td>
+            </tr>
+            <tr>
+            <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-CZ-02-relationships/solution_hard_1.png" style="margin-right:3em" width="330"></td>
+            <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-CZ-02-relationships/solution_hard_2.png" width="330"></td>
+            </tr>
+            </tbody></table>
+            </center>
+         </div>
+
+         <h2>C'est de l'informatique</h2> 
+         <!-- <div class="hard">   -->
+         <p>
+         Les flèches représentent ici des contraintes d'âges, mais elles pourraient 
+         représenter n'importe quel type de relation entre des objets.
+         </p>
+         <p>
+         Par exemple,
+         les cases peuvent représenter des opérations à effectuer pour construire
+         une maison et les flèches représenter des contraintes sur quelle opération
+         doit être réalisée avant telle autre. Par exemple, il faut construire les
+         murs avant de poser le toit. Il est cependant possible que des actions ne soient pas contraintes.
+         Par exemple, aménager le jardin et décorer la maison sont deux
+         tâches que l'on peut faire dans n'importe quel ordre, voir même 
+         en parallèle. 
+         </p>
+         <p>
+         Si une seule personne veut effectuer toutes les opérations,
+         elle peut vouloir mettre dans un ordre particulier toutes les 
+         opérations à effectuer. Il y a plusieurs ordres possibles, mais
+         tout ce qui compte au final, c'est que l'ordre choisi respecte 
+         bien les contraintes représentées par les flèches. 
+         </p>
+         <p>
+         Choisir un ordre particulier est une opération que l'on appelle
+         « tri topologique », et qui est très utile en informatique.
+         Un ordinateur est capable de construire un tri topologique
+         en quelques secondes, même lorsqu'il y a des milliards de flèches.
+         </p>
+	  </div>
+<div id="javascript-solution-2015-CZ-02-relationships" data-content=""></div>
+<div id="solution-2015-CA-02-fireworks" class="solution">
+<style></style>
+
+         <h2>Solution</h2>
+       
+         <div class="easy" style="display: block;">        
+            <p>Deux solutions étaient possibles. </p>
+            <table>
+            <tbody><tr>
+            <td><b>Solution 1 :</b></td>
+            <td><b>Solution 2 :</b></td>
+            </tr>
+            <tr>
+            <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-CA-02-fireworks/solution_easy_2.png" style="margin-right: 5em"></td>
+            <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-CA-02-fireworks/solution_easy_1.png"></td>
+            </tr>
+            </tbody></table>
+         </div>
+         <div class="medium" style="display: none;">   
+            <p>Voici les 3 séquences à trouver. </p>
+            <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-CA-02-fireworks/solution_medium.png"></p>
+         </div>
+         <div class="hard" style="display: none;">         
+            <p>Voici les 3 séquences à trouver. </p>
+            <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-CA-02-fireworks/solution_hard.png"></p>
+         </div>
+        
+         <h2>C'est de l'informatique !</h2>
+
+         <p>Pour trouver les séquences, on peut procéder de manière systématique.
+         On essaie parmi les mots possibles ceux qui peuvent correspondre au début.
+         Dès qu'on a trouvé un mot, on essaie de compléter la suite. Si on n'arrive
+         pas à obtenir une nouvelle séquence, on revient en arrière, et on essaie
+         un autre mot qui pourrait se placer à la position courante.</p>
+
+         <p>Cette idée de revenir en arrière pour explorer de manière systématique
+         l'ensemble des solutions possibles est très utile en informatique.
+         En effet, de nombreux problèmes peuvent se résoudre sans réfléchir,
+         «&nbsp;simplement&nbsp;» en effectuant des millions ou des milliards d'étapes de calcul.
+         Attention&nbsp;: ce qui est «&nbsp;simple&nbsp;» pour un ordinateur ne correspond en 
+         général pas à ce qui est «&nbsp;simple&nbsp;» pour un être humain&nbsp;!
+         </p>
+
+	  </div>
+<div id="javascript-solution-2015-CA-02-fireworks" data-content=""></div>
+<div id="solution-2015-FR-03-mark-and-shuffle" class="solution">
+<style></style>
+
+         <h2>Solution</h2>
+            <p>Voici une solution, parmi les nombreuses possibles.</p>
+            <p>
+            <img class="easy" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-03-mark-and-shuffle/solution_easy.png" style="display: inline;">
+            <img class="medium" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-03-mark-and-shuffle/solution_medium.png" style="display: none;">
+            <img class="hard" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-03-mark-and-shuffle/solution_hard.png" style="display: none;">
+            </p>
+         
+            <div class="hard" style="display: none;">
+               <p>
+               Notez que pour cette version il fallait utiliser tous les marquages possibles.
+               </p>
+               <p>Voici une autre solution, construite de manière un peu plus systématique.
+               À vous de trouver la logique&nbsp;!</p>
+               <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-03-mark-and-shuffle/solution_hard2.png"></p>
+            </div>
+
+
+         <h2>C'est de l'informatique !</h2>
+
+            <p>Sur chaque patte d'oiseau, on peut mettre un certain nombre de marques,
+            chaque marque étant soit blanche, soit noire. De la même manière, un 
+            ordinateur représente l'information en utilisant des <b>0</b> et des <b>1</b>,
+            chacun correspondant à un « bit » d'information.</p>
+
+            <p>Un disque dur usuel, par exemple un disque contenant un téra-octet d'information,
+            contient 8 000 milliards de bits&nbsp;! Vous avez bien lu&nbsp;: 8 millions de millions
+            de <b>0</b> et de <b>1</b>.</p>
+            
+            <p>Même si l'on dispose de beaucoup d'espace de stockage, il est important
+            d'utiliser des « codages » efficaces de l'information, de
+            la même manière que dans ce sujet on ne dispose que de quelques marques
+            pour représenter l'identité de nombreux oiseaux.</p>
+
+            <div class="hard" style="display: none;">
+            <p>On a ici 3 marques possibles sur chaque oiseau. 
+            La première marque peut prendre 2 valeurs possibles,
+            la seconde marque également, et la troisième également,
+            donc on a <b>2 * 2 * 2 = 8</b> possibilités au total.
+            Vu qu'il faut distinguer 8 oiseaux, on est obligé d'utiliser
+            toutes les combinaisons possibles de marques.
+            </p>
+            </div>
+      
+	  </div>
+<div id="javascript-solution-2015-FR-03-mark-and-shuffle" data-content=""></div>
+<div id="solution-2015-SI-05-horse-races" class="solution">
+<style></style>
+
+         <h2>Solution</h2>
+         
+    
+            <div>
+               <div> <img style="float:right" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/solution_courses_0.png" width="150">
+               <p>Le sujet présente les résultats de 3 courses déjà réalisées. Nous avons ajouté des flèches&nbsp;: chaque flèche relie un cheval vers un autre cheval plus lent que lui. </p>
+               <p>Nous n'avons dessiné que les flèches directes&nbsp;: par exemple, il n'y a pas de flèche de B vers C, car il y a déjà une flèche de B vers A et une de A vers C.</p>
+               </div>
+               <p><strong>Étape 1 : trouver le cheval le plus rapide de tous</strong> </p>
+               <p>Le plus rapide est forcément l'un des 3 vainqueurs des 3 courses passées. Ici, il s'agit de&nbsp;: B, E et G. On organise donc une course entre eux. Le vainqueur est le plus rapide, on le place en haut du podium.</p>
+               <table><tbody><tr><td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/solution_course_1.png" width="150" style="margin-right:4em"></td>
+                     <td><span class="easy"><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/easy_podium_1.png" width="150"></span>
+                         <span class="medium"><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/medium_podium_1.png" width="150"></span>
+                         <span class="hard"><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/hard_podium_1.png" width="150"></span></td>
+               </tr></tbody></table>
+            </div>
+            <div class="medium hard">
+            <img style="float:right" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/medium_graph.png" width="200">
+         
+               <p><strong>Étape 2 : trouver le deuxième cheval le plus rapide</strong></p>
+               <p>La course effectuée à l'étape 1 nous apporte de l'information. Nous l'avons représentée par les flèches rouges ci-contre.</p>
+               <p>Le deuxième cheval le plus rapide est forcément l'un des deux chevaux encadrés en bleu. Il s'agit de chevaux qui sont arrivés deuxièmes à une course précédente, juste derrière le cheval le plus rapide.</p>
+               <p>On organise une course entre ces deux chevaux, en complétant avec un autre cheval pris au hasard (ici H). Le gagnant prend la deuxième place du podium.</p>
+               <table><tbody><tr><td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/solution_course_2.png" width="150" style="margin-right:4em"></td>
+                  <td><span class="medium"><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/medium_podium_2.png" width="150"></span>
+                        <span class="hard"><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/hard_podium_2.png" width="150"></span></td>
+               </tr></tbody></table>
+            </div>
+            <div class=" hard">
+            <img style="float:right" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/hard_graph_1.png" width="200">
+               <p><strong>Étape 3 : trouver le troisième cheval le plus rapide</strong> </p>
+               <p>La course effectuée à l'étape 2 nous apporte encore de l'information, que nous représentons en rouge ci-contre.</p>
+               <p> Pour la troisième place, il y a deux candidats possibles, encadrés de bleu. Il s'agit de ceux qui sont arrivés juste après le deuxième plus rapide (ici F) dans les courses qu'il a déjà couru. Il s'agit de D et de B.</p>
+               <p>On organise une course entre ces deux chevaux, en complétant avec un autre cheval pris au hasard (ici H). Le gagnant prend la troisième place du podium.</p>
+                  <table><tbody><tr><td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/solution_course_3.png" width="150"></td>
+                     <td>Le vainqueur est B&nbsp;. <br>c'est le troisième plus rapide de tous.</td>
+                     <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/hard_podium_3.png" width="150"></td>
+                  </tr></tbody></table>
+
+               <p><strong>Une variante de l'étape 3</strong> </p>
+               <img style="float:right" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/hard_graph_2.png" width="200">
+               <p>Supposons que le résultat de la deuxième course soit B / F / H, à la place de F / B / H. Dans ce cas, le cheval B prend la deuxième place du podium. Nous aurions alors la situation ci-contre. Pour déterminer la troisième place, nous aurions fait courir les chevaux arrivés après B dans les courses précédentes, c'est-à-dire A, F et G.</p>
+    
+               <p><strong>Une autre variante de l'étape 3</strong> </p>
+
+               <p>Supposons maintenant que nous ayons utilisé à l'étape 2 le cheval D pour compléter la course, à la place du cheval H. Le résultat aurait été F / B / D. Dans ce cas, on aurait pu conclure directement que B était le troisième cheval le plus rapide, sans organiser de troisième course.</p>
+
+            </div>
+
+           <h2>C'est de l'informatique !</h2>
+               <p>
+               Lorsque vous placez les bons chevaux sur le podium, comment est-ce que nous pouvons être certains que vous ayez bien réalisé les courses permettant de déduire le podium et que vous n'avez pas simplement essayé toutes les possibilités&nbsp;?
+               </p>
+               <p>
+               Le programme d'évaluation est représenté par l'ensemble des flèches correspondantes aux informations déduites de chacune des courses organisées, comme sur les illustrations montrées ci-dessus. Plus précisément, on place une flèche entre deux chevaux lorsqu'un cheval est arrivé avant un autre dans une course.
+               </p>
+               <p>
+               Pour vérifier que les courses organisées suffisent à déduire que le cheval placé en haut du podium est bien le plus rapide, il suffit de vérifier que, en partant de ce cheval, on peut atteindre tous les autres en suivant les flèches. En effet, s'il existait un autre cheval qui n'est pas relié par une suite de flèches, alors cet autre cheval pourrait être le plus rapide.
+               </p>
+               <p>De même, pour vérifier que l'on peut déduire que le second cheval est correct, il suffit de vérifier que de ce cheval on peut atteindre tous les autres sauf le premier en suivant les flèches. Enfin, de même pour le troisième, à partir duquel on doit atteindre tous les autres sauf le premier et le second cheval.</p>
+               <p>Pour vérifier que, à partir d'un cheval, on puisse atteindre tous les autres chevaux en suivant les flèches, nous avons programmé ce que l'on appelle un <b>algorithme de graphe</b>, un outil couramment utilisé en informatique.</p>
+	  </div>
+<div id="javascript-solution-2015-SI-05-horse-races" data-content=""></div>
+<div id="solution-2015-FR-01-copy-pattern" class="solution">
+<style></style>
+         <h2>Solution</h2> 
+         <div class="easy" style="display: block;">
+            <p>On commence par repérer le motif qui est répété 6 fois. Il est encadré en rouge ci-dessous.</p>
+            <p style="text-align:center"><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-01-copy-pattern/solution_easy_pattern_1.png" width="500"></p>
+            <p>On regarde alors de plus près ce motif, afin de décomposer les déplacements.</p>
+            <p style="text-align:center"><img style="vertical-align:top" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-01-copy-pattern/solution_easy_pattern_2.png" width="150"></p>
+            <p>On cherche alors les instructions qui correspondent aux déplacements. On obtient alors la solution&nbsp;:</p>
+            <p style="text-align:center"><img style="vertical-align:top" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-01-copy-pattern/solution_easy.png" width="150"></p>
+         </div>
+<!--1 pas à droite <br />1 pas à droite <br />1 pas en haut <br />1 pas à droite <br />1 pas à droite <br />1 pas en bas <br /></p>-->
+         <div class="medium" style="display: none;">
+            <p>On commence par repérer le motif qui est répété. Les 4 flèches rouges correspondent à la première répétition du motif. Les 4 flèches bleues correspondent à la seconde répétition.</p>
+            <p style="text-align:center"><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-01-copy-pattern/solution_medium_pattern.png" width="200"></p>
+            <p>On étudie alors la composition du motif.</p>
+            <ul>
+               <li>La première fois&nbsp;: 1 pas à droite, 2 pas en bas, 3 pas à gauche, 4 pas en haut  (c'est le tracé rouge).</li>
+               <li>La second fois&nbsp;: 5 pas à droite, 6 pas en bas,  7 pas à gauche, 8 pas en haut  (c'est le tracé bleu).</li>
+               <li>La troisième fois&nbsp;: 9 pas à droite, 10 pas en bas, 11 pas à gauche, 12 pas en haut, etc.</li>
+            </ul>
+            <p>On observe que le motif répété consiste à aller dans chacune des 4 directions (droite, bas, gauche, haut), en augmentant de une unité à chaque fois le nombre de pas effectués. On va donc utiliser l'instruction «&nbsp;augmenter N&nbsp;» entre chaque déplacement. Le solution est ainsi&nbsp;:</p>
+            <p style="text-align:center"><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-01-copy-pattern/solution_medium.png" width="150" style="vertical-align:text-top"></p>
+         </div>
+         <div class="hard" style="display: none;">
+            <p>Voici trois solutions, assez différentes les unes des autres.</p>
+            <p><b>Première solution</b></p>
+            <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-01-copy-pattern/solution_hard.png" width="150" style="margin:0em 2em 0em 2em">
+               <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-01-copy-pattern/solution_hard_pattern.png"></p>
+
+            <p><b>Deuxième solution</b></p>
+            <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-01-copy-pattern/solution_hard_2.png" width="150" style="margin:0em 2em 0em 2em">
+               <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-01-copy-pattern/solution_hard_pattern_2.png"></p>
+
+            <p><b>Troisième solution</b></p>
+            <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-01-copy-pattern/solution_hard_3.png" width="150" style="margin:0em 2em 0em 2em">
+               <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-01-copy-pattern/solution_hard_pattern_3.png"></p>
+            <p>Notez que dans la troisième solution, seules 6 répétitions sont nécessaires pour compléter le dessin.</p>
+         </div>
+         <!--
+            Voici une séquence de déplacements qui permet de dessiner le motif&nbsp;: 
+            <br/>1 pas en bas,  1 pas à droite, 1 pas à gauche, 1 pas à gauche, 1 pas à droite,  (tracé rouge sur le dessin ci-dessous)
+            <br/> 1 pas en bas, 2 pas à droite, 2 pas à gauche, 2 pas à gauche, 2 pas à droite, (tracé bleu sur le dessin ci-dessous)
+            <br/> 1 pas en bas, 3 pas à droite, 3 pas à gauche, 3 pas à gauche, 3 pas à droite, (tracé vert sur le dessin ci-dessous)
+            <br/>etc. </p>
+               <p>On observe que&nbsp;: </p>
+               <ol>
+                     <li>Une séquence de déplacements est répétée 12 fois : en bas,  à droite, à gauche, à gauche, à droite.</li>
+			          <li>Le premier déplacement de la séquence répétée est toujours le même : 1 pas en bas</li>
+			         <li>Le nombre de pas des autres déplacements augmente de 1 à chaque répétition : il faut utiliser les instructions avec N pas et augmenter N de 1 à chaque fin de la séquence</li>
+            </ol></p>
+         -->
+
+	 <h2>C'est de l'informatique !</h2>
+       <p>
+       Dans ce sujet, il faut écrire un programme en utilisant des instructions.
+       Ces instructions seront répétées de manière systématique.
+       La faculté de répéter une opération un grand nombre de fois sans se lasser
+       est le point fort des ordinateurs&nbsp;!
+       </p>
+       <p class="medium hard" style="display: none;">
+       Certaines des instructions proposées dépendent de la valeur de la
+       <b>variable</b> nommée N. On l'appelle «&nbsp;variable&nbsp;» car
+       justement sa valeur peut varier au cours de l'exécution du programme.
+       </p>
+       <p class="medium hard" style="display: none;">
+       L'utilisation de variables permet d'écrire des programmes beaucoup 
+       plus intéressants, car plus génériques, que ce que l'on pourrait obtenir sans.
+       </p>
+
+
+      </div>
+<div id="javascript-solution-2015-FR-01-copy-pattern" data-content=""></div>
+<div id="solution-2015-FR-13-open-lock" class="solution">
+<style></style>
+
+         <h2>Solution</h2>
+         	<div class="easy">
+               <p>Il faut essayer les 3 codes montrés ci-dessous.</p>
+               <table><tbody><tr>
+               <td style="text-align:center"><b>8553</b></td>
+               <td style="text-align:center"><b>8535</b></td>
+               <td style="text-align:center"><b>8355</b></td>
+               </tr>
+               <tr>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-13-open-lock/solution_easy_1.png" width="220" style="margin-right:1em"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-13-open-lock/solution_easy_2.png" width="220" style="margin-right:1em"></td>
+               <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-13-open-lock/solution_easy_3.png" width="220"></td>
+               </tr>
+               </tbody></table>
+               <p>En effet, pour placer deux fois le chiffre <b>5</b> et une fois le chiffre <b>3</b>, il y a trois possibilités, selon l'endroit où l'on place le chiffre <b>3</b>.</p>
+           </div>
+               
+			<div class="medium">
+           <p>Il y a 6 codes possibles : <b> 8551, 8552, 8515, 8525, 8155, 8255</b>.</p>
+       	  
+           <p>Pour trouver ces codes, on commence par placer le chiffre <b>8</b>. Ensuite, on choisit l'endroit où l'on ne va pas mettre de chiffre <b>5</b>. Il y a trois endroits possibles pour cela. A chacun de ces endroits, on peut mettre soit un <b>1</b>, soit un <b>2</b>.
+  			
+			</p></div>
+			<div class="hard">
+	
+	      <p>Il y a 6 codes possibles : <b>3355, 3553, 3535, 5335, 5353, 5533 </b>.</p>
+
+         <p>Pour trouver ces codes, on peut considérer deux cas possibles. </p>
+         <ul>
+         <li>Soit le code commence par un <b>3</b>. Dans ce cas, il reste un chiffre <b>3</b> et deux chiffres <b>5</b> à placer. Il y a trois cas possibles, selon où l'on place le chiffre <b>3</b>.</li>
+         <li>Soit le code commence par un <b>5</b>. Dans ce cas, il reste un chiffre <b>5</b> et deux chiffres <b>3</b> à placer. Il y a trois cas possibles, selon où l'on place le chiffre <b>5</b>.</li>
+         </ul>
+  			
+         <p>Pour essayer tous les codes en un nombre minimum de clics, il faut les prendre dans un certain ordre, de sorte à passer d'un code au suivant en ne faisant que 2 modifications. </p>
+         <p>On effectue alors 4 clics pour le premier code, puis 2 clics pour chaque code suivant, soit 14 clics au total.</p>
+
+   		</div>
+
+		 <h2>C'est de l'informatique !</h2>
+         <p>Pour trouver un mot de passe, une approche qui marche à tous les coups, c'est d'essayer toutes les possibilités&nbsp;! Cependant, cette approche peut prendre un temps considérable.</p>
+         <p>Lorsqu'on a des informations supplémentaires sur la manière dont le mot de passe à été construit, on peut gagner beaucoup de temps en n'essayant que les possibilités qui ont une chance de marcher.</p>
+         <p>Pour cela, il faut être capable d'énumérer efficacement les possibilités qui satisfont certaines contraintes. C'est exactement ce que l'on demandait dans ce sujet.</p>
+
+	  </div>
+<div id="javascript-solution-2015-FR-13-open-lock" data-content=""></div>
+<div id="solution-2015-FR-07-placing-arrows" class="solution">
+<style></style>
+
+         <h2>Solution</h2>
+            <div class="easy"> 
+               <p>Voici deux solutions possibles. Des variantes fonctionnent également.</p>
+               <table>
+                  <tbody><tr>
+                  <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-07-placing-arrows/solution_easy_2.png" width="350" style="margin-right:2em"></td>
+                  <td><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-07-placing-arrows/solution_easy.png" width="350"></td>
+                  </tr>
+               </tbody></table>
+            </div>
+            <div class="medium"> 
+              <p>Voici une solution possible. Des variantes fonctionnent également.</p>
+              <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-07-placing-arrows/solution_medium.png" width="350"></p>
+            </div>
+            <div class="hard"> 
+               <p>Voici la solution.</p>
+               <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-07-placing-arrows/solution_hard.png" width="350"></p>
+               </div>
+             <div>
+               <p>Le robot ne sait que tourner vers la droite.
+               Il n'est donc pas facile de le faire tourner  vers la gauche. C'est
+               pourtant ce qu'on a besoin de faire à certains points de son parcours.
+               La solution est alors de lui faire faire un tour complet
+               sur lui-même, en l'obligeant à tourner 3 fois sur sa droite.
+               </p>
+               </div>
+               <div class="hard"> 
+               <p>
+               Pour cela, dans cet exemple, on doit placer un bloc forçant le robot à tourner trois fois sur lui-même. Cependant, cela ne suffit pas, il faut aussi placer ce bloc de telle sorte que le robot fasse un demi tour assez ample pour ne pas être bloqué au tournant suivant. Ainsi, dans la solution ci-dessous le robot va bien vers sa gauche en bas, mais ensuite son chemin est trop près du mur&nbsp;: on ne pourra pas poser d'autre bloc pour lui faire changer de direction et le faire remonter vers le haut.
+                </p><p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-07-placing-arrows/solution_hard_bad.png" width="350"></p>
+ 				<p>Il n'y a donc qu'une seule solution&nbsp;: suivre la stratégie illustrée sur l'image la première image.</p>
+				<p></p>
+
+            </div>
+         <h2>C'est de l'informatique !</h2>
+            <p>Dans ce sujet, on pouvait simuler l'exécution d'un programme dans sa tête, afin d'éviter de perdre du temps à exécuter le programme de nombreuses fois.</p>
+            <p>Arriver à imaginer les étapes qui vont être effectuées est très utile en général pour un programmeur.</p>
+         
+	  </div>
+<div id="javascript-solution-2015-FR-07-placing-arrows" data-content=""></div>
+<div id="solution-2015-FR-15-guess-who" class="solution">
+<style></style>
+
+         <h2>Solution</h2>
+         	<div class="easy">
+               <p>La solution est montrée ci-dessous.</p>
+               <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-15-guess-who/solution_easy.png" width="500"></p>
+               <p>Vérifions que les personnages sont effectivement bien placés. 
+               </p><ul>
+               <li>Le premier personnage a un noeud papillon, et il a des lunettes.</li>
+               <li>Le deuxième personnage a un noeud papillon mais il n'a <strong>pas</strong> de lunettes.</li>
+               <li>Le troisième personnage n'a <strong>pas</strong> de noeud papillon, mais il a un bonnet.</li>
+               <li>Le quatrième personnage n'a <strong>pas</strong> de noeud papillon, et il n'a <strong>pas</strong> de bonnet.</li>
+               </ul><p></p>
+         	</div>
+            <div class="medium">
+               <p>Une solution valide est&nbsp;:</p>
+               <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-15-guess-who/solution_medium.png" width="500"></p>
+               <p>L'ovale tout en haut doit forcément contenir des lunettes. En effet, c'est le seul élément qui divise les personnages en deux groupes égaux&nbsp;: deux personnages ont des lunettes et deux n'en n'ont pas.</p>
+               <p>L'ovale en dessous à gauche doit forcément contenir les cheveux, car c'est le seul élément qui permet de distinguer les deux personnages portant des lunettes.</p>
+               <p>L'ovale de droite peut lui contenir soit un bonnet, soit un noeud papillon, car ces éléments permettent de distinguer les deux personnages qui n'ont pas de lunettes.</p>
+            </div>
+		    <div class="hard">
+            <p>Une solution valide est&nbsp;:</p>
+            <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-15-guess-who/solution_hard.png" width="600">
+            <p>L'ovale tout en haut doit forcément contenir un élément qui divise les personnages en deux groupes égaux&nbsp;: <b>4</b> personnages ayant cette élément, et <b>4</b> personnages ne l'ayant pas. On a donc a priori le choix entre&nbsp;: la bouche, le noeud papillon, les lunettes ou les cheveux.</p>
+            <p>Supposons que l'on mette la bouche. Pour pouvoir compléter la suite, il faut trouver un élément qui sépare en <b>2</b> groupes de <b>2</b>  les personnages ayant une bouche, et un élément qui sépare en <b>2</b>  groupes de <b>2</b>  les personnages qui n'ont pas de bouche. </p>
+            <p>Pour ceux qui ont une bouche (ci-dessous à gauche), on peut utiliser le bonnet pour faire deux groupes de deux.</p>
+            <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-15-guess-who/solution_bad_mouth.png" width="300">
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-15-guess-who/solution_bad_no_mouth.png" width="300"></p>
+            <p>Pour les personnages qui n'ont pas de bouche (ci-dessus à droite), c'est problématique. Il y en a 3 avec un bonnet, 3 avec des cheveux, 1 avec des lunettes, 1 avec un nez, 0 avec un noeud papillon. Donc aucun élément ne permet de faire deux groupes de deux.</p>
+            <p>On conclut que ce ne peut pas être la bouche dans le premier ovale tout en haut. En essayant de même avec les autres éléments, on finit par trouver (au bout d'un certain temps !) qu'il faut mettre les cheveux tout en haut.      
+          </p></div>
+         
+         <h2>C'est de l'informatique !</h2>
+            <p>Ce sujet illustre la notion d'<b>arbre de décision</b>. Ce type d'arbre permet d'identifier très rapidement des éléments, ici des personnages. Voyons à travers un exemple à quoi peut servir ce type d'arbre.</p>
+            <p>Supposons que votre ami Martin ait dessiné un personnage en utilisant 6 éléments possibles, et que vous souhaitiez savoir si son personnage est dans une liste de 8 personnages que vous avez sous les yeux. Si vous procédez naivement, dans le pire cas vous devrez poser, pour chacun des 8 personnages, jusqu'à 6 questions (une par élément), ce qui fait au total 48 questions.</p>
+            <p>En revanche, si vous utilisez un arbre de décision avec 3 niveaux de questions, vous pouvez déterminer si le personnage dessiné par Martin se trouve dans votre liste de 8 personnages en posant seulement 6 questions ! En effet, vous pouvez poser les questions en suivant un chemin descendant dans l'arbre, et lorsque vous arrivez à un personnage en bas de l'arbre, il ne restera plus qu'à vérifier si les 3 éléments restants (ceux pour lesquels vous n'avez pas encore posé de question) correspondent bien.</p>
+            <p>En résumé, l'utilisation d'un arbre à 3 niveaux permet de réduire le nombre de questions nécessaires (dans le pire cas) de 48 à seulement 6&nbsp;! L'utilisation d'un arbre de décision est encore plus bénéfique lorsqu'on a des bases de données avec des millions d'éléments&nbsp;; dans ce cas, on peut éviter de poser des millions de questions, une trentaine suffira.</p>
+            
+
+	  </div>
+<div id="javascript-solution-2015-FR-15-guess-who" data-content=""></div>
+<div id="solution-2015-FR-02-spreading-secret" class="solution">
+<style></style>
+
+         <h2>Solution</h2>
+            <div class="easy" style="display: block;">
+               <p>On place les antennes à la suite les unes des autres.</p>
+               <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-02-spreading-secret/solution_easy_1.png"></p>
+               <p>D'autres solutions étaient possibles en plaçant des antennes dans les cases grises. Par exemple&nbsp;</p>
+               <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-02-spreading-secret/solution_easy_2.png"></p>
+            </div>
+
+            <div class="medium" style="display: none;">
+               <p>On place les antennes à la suite les une des autres, en alternant entre ligne du haut et ligne du bas.</p>
+               <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-02-spreading-secret/solution_medium_1.png"></p>
+               <p>D'autres solutions étaient possibles en plaçant des antennes dans les cases grises. Par exemple&nbsp;:</p>
+               <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-02-spreading-secret/solution_medium_2.png"></p>
+            </div>
+
+            <div class="hard" style="display: none;">
+               <p>L'idée est de placer les antennes selon un motif régulier.</p>
+               <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-02-spreading-secret/solution_hard.png"></p><p></p>
+               <p>Il y a d'autres solutions possibles, selon l'endroit où l'on place la première antenne, et selon si l'on place les antennes sur des lignes descendantes ou bien des lignes montantes. Ces solutions sont globalement toutes équivalentes (à une symétrie ou une translation près).</p>
+            </div>
+         
+
+         <h2>C'est de l'informatique&nbsp;!</h2>
+
+            <p>L'objectif de ce sujet est de trouver un motif régulier,
+            appelé « pavage ».
+            On peut construire ce motif en plaçant une première antenne couvrant
+            une première case blanche, puis en avançant de proche en proche.
+            </p>
+            <p>Sur une petit grille comme illustré ci-dessous, on n'a aucun choix possible&nbsp;:
+            pour ne pas laisser de case blanche non couverte, on est obligé 
+            de poser, à chaque fois, une antenne collée à la précédente.</p>
+            <p class="easy" style="display: block;"><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-02-spreading-secret/solution_easy_1.png"></p>
+            <p class="medium hard" style="display: none;"><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-02-spreading-secret/solution_medium_1.png"></p>
+  
+            <div class="hard" style="display: none;">
+            <p>Sur une grande grille en revanche, appliquer ce principe ne fonctionne pas forcément.
+            Par exemple, en commençant comme montré ci-dessous, on se retrouve coincé.
+            Quel que soit la manière dont on continue, on aura forcément une case blanche non recouverte.</p>
+            <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-02-spreading-secret/solution_hard_bad_start.png"></p>
+            <p>Il n'y a alors pas d'autres solutions que de revenir en arrière, 
+            pour essayer de commencer autrement le remplissage de la grille.
+            Il n'y a en fait que très peu de manières différentes de commencer.
+            On finit donc par trouver celle qui fonctionne. Dès qu'on a le
+            bon début, on n'a plus le choix pour remplir le reste de la grille
+            sans laisser de trous.</p>
+            <p><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-02-spreading-secret/solution_hard_good_start.png"></p>
+            <p>Cette technique de retour en arrière ou <strong>retour sur trace</strong>  («&nbsp;backtracking&nbsp;»
+            en anglais) permet d'explorer plusieurs départs possibles.
+            C'est une technique très utile pour résoudre de nombreux problèmes,
+            notamment pour trouver des solutions dans des jeux comme le Sudoku
+            ou le Scrabble.</p>
+
+	  </div> <!-- task-solution -->
+   
+
+ 
+</div>
+<div id="javascript-solution-2015-FR-02-spreading-secret" data-content=""></div>
+<div id="solution-2015-FR-04-next-distance" class="solution">
+<style></style>
+
+         <h2>Solution</h2>
+
+            <p>Voici la solution&nbsp;:<br>
+            </p><div class="easy" style="display: block;">
+               <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-04-next-distance/solution_easy.png">
+            </div>
+            <div class="medium" style="display: none;">
+               <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-04-next-distance/solution_medium.png">
+               <p>La case encadrée de rouge n'est pas marquée car elle est située à 3 pas de Castor et non 5.
+            </p></div>
+            <div class="hard" style="display: none;">
+               <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-04-next-distance/solution_hard.png">
+            </div>
+
+         <h2>C'est de l'informatique !</h2>
+
+            <p>On peut généraliser le principe montré dans le sujet.
+            On commence par marquer toutes les cases à distance <b>1</b> du point
+            de départ, puis toutes les cases à distances <b>2</b>, puis <b>3</b>, etc.
+            Une fois les cases marquées, on peut facilement trouver pour chaque case,
+            comment atteindre le point de départ (à distance <b>0</b>) le plus vite
+            possible&nbsp;: il suffit de se diriger vers les plus petits numéros.
+            </p>
+
+	  </div>
+<div id="javascript-solution-2015-FR-04-next-distance" data-content=""></div>
+<div id="solution-2015-AT-07-telephone-book" class="solution">
+<style></style>
+
+         <h2>Solution</h2>
+         
+         <div class="easy" style="display: block;">
+            <img style="float:right" s="" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-AT-07-telephone-book/solution_easy.png">
+            <p> Un mot qui correspond au motif <span class="pattern">c??t</span> est un mot composé de 4 lettres, qui commence par un <strong>c</strong> et qui se termine par un <strong>t</strong>. Les deux lettres du milieu peuvent être n'importe lesquelles.</p>
+            <p>Dans la liste proposée, les mots correspondant à cette description sont&nbsp;: <b>chat</b>, <b>chut</b> et <b>cuit</b>. </p>
+            <p>Les autres mots ne correspondent pas. En effet, <b>char</b>  ne se termine pas par un <strong>t</strong>, tandis que <b>plat</b> ne commence pas par un <strong>c</strong>.</p>
+         </div>
+          
+         <div class="medium" style="display: none;">
+            <img style="float:right" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-AT-07-telephone-book/solution_medium.png">
+            <p>Un mot qui correspond au motif <span class="pattern">?a…e</span> est un mot dont la deuxième lettre est un <strong>a</strong>, et qui se termine par un <strong>e</strong>. La première lettre peut être n'importe laquelle, et entre le <strong>a</strong> et le <strong>e</strong>, il peut y avoir zéro, une, ou plusieurs lettres, n'importe lesquelles.</p>
+            <p>Dans la liste proposée, les mots correspondant à cette description sont&nbsp;: <b>table</b>, <b>rave</b> et <b>mare</b>. </p>
+            <p>Les autres mots ne correspondent pas au motif. En effet, <b>tacher</b>, <b>tartes</b>, <b>parer</b> ne se terminent pas par un <strong>e</strong>, tandis que les mots <b>arrive</b> et <b>charme</b> n'ont pas de <strong>a</strong> en deuxième position.</p>
+         </div>
+          
+         <div class="hard" style="display: none;">
+            <img style="float:right" src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-AT-07-telephone-book/solution_hard.png">
+            <p>Un mot qui correspond au motif <span class="pattern">…pro?…s…</span>  est un mot qui comporte la suite de lettres <strong>pro</strong> et qui comporte, plus loin, un <strong>s</strong>. Le morceau de motif <span class="pattern">?…</span> indique qu'il doit y avoir au moins une lettre entre
+            le <strong>o</strong> et le <strong>s</strong>.
+            </p>
+            <p>Remarque&nbsp;: le mot peut très bien commencer par <strong>pro</strong> ou se terminer par <strong>s</strong>.</p>
+            <p>Dans la liste proposée, les mots correspondant  à cette description sont&nbsp;: <b>reproches</b>, <b>pronostic</b>, <b>prochains</b> et <b>promesse</b>. </p>
+            <p>Les autres mots ne correspondent pas au motif. En effet, les mots <b>attraper</b>, <b>reposer</b> et <b>crocheter</b> ne comportent pas la suite de lettres <strong>pro</strong>, tandis que le mot <b>prosterner</b> ne contient aucune lettre entre <strong>pro</strong> et <strong>s</strong>.</p>
+         </div>
+
+
+         <h2>C'est de l'informatique !</h2>
+
+         <p>En informatique, on utilise des motifs de mots de la sorte, ainsi que des
+         motifs plus compliqués appelés «&nbsp;<strong>expressions rationnelles</strong>&nbsp;» (on trouve aussi le terme «&nbsp;expressions régulières&nbsp;» issu de la traduction de l'anglais <i>regular expression</i>). 
+         <br>On peut utiliser alors des programmes très efficaces afin de trouver où le motif apparaît dans un très long texte.</p>
+         <p>On peut aussi utiliser de telles expressions dans de nombreux logiciels. Par exemple, dans la plupart des logiciels de traitement de texte, il est possible de faire une recherche de mots en utilisant des expressions rationnelles.</p>
+         <!--Des programmes similaires
+         peuvent également être utiles pour trouver des apparitions d'un gène dans une 
+         longue séquence d'ADN.-->
+         <!--Ces expressions rationnelles sont utilisées en pratique dans les
+           filtres anti-spam et les anti-virus. Ils sont alors bien plus
+           complexes que celui ci-dessus.-->
+         
+
+
+	  </div>
+<div id="javascript-solution-2015-AT-07-telephone-book" data-content=""></div>

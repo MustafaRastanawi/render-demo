@@ -18,6 +18,10 @@ WORKDIR /var/www/html
 
 COPY . /var/www/html
 
+RUN if [ -d /var/www/html/.git ]; then \
+      cd /var/www/html && git submodule update --init --recursive; \
+    fi
+
 RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
     && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
     && php -r "unlink('composer-setup.php');"

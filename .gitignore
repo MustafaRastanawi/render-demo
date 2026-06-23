@@ -1,6 +1,5 @@
 vendor/
 /contestInterface/bower_components/
-/contestInterface/contests/
 /teacherInterface/bower_components/
 /teacherInterface/beaver_tasks/
 /logs/
@@ -20,6 +19,8 @@ logs/*
 # Local generated contest files
 contestInterface/contests/*
 !contestInterface/contests/.keep
+!contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/
+!contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/**
 
 # Local Docker files
 Dockerfile
@@ -36,6 +37,8 @@ logs/*
 !logs/.keep
 contestInterface/contests/*
 !contestInterface/contests/.keep
+!contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/
+!contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/**
 
 # Local copied folders
 teacherInterface/_common

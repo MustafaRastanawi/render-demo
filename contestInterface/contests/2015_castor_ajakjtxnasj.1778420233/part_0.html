@@ -1,0 +1,4226 @@
+<!doctype html>
+<div id="question-2015-JP-04-crane-operating" class="question"><div id="task" class="taskView">
+<style>
+         #inputs {
+            margin: 0px auto  20px auto;
+            border: 1px solid black;
+         }
+         #anim_container {
+            text-align: center;
+            min-height: 240px;
+         }
+         #anim {
+            display: inline-block;
+         }
+         #target_container {
+            width: 100%;
+            text-align: center;
+         }
+         #target_container p {
+            margin: 0.5em;
+         }
+         #target_anim {
+            width: 320px;
+            display: inline-block;
+         }
+         #sequence {
+            margin: 0px auto;
+            width: 600px;
+            height: 40px;
+         }
+         #tokens {
+            text-align: center;
+            font-size: 20px;
+         }
+         #tokens span {
+            padding: 4px;
+         }
+         .highlighted {
+            font-weight: bold;
+            border: solid black 1px;
+            border-radius: 4px;
+         }
+         #target_txt p {
+            padding-left: 20px;
+         }
+         #user_sequence {
+            min-width: 240px;
+            height: 24px;
+            border: solid 1px black;
+            padding: 10px;
+            vertical-align: middle;
+            display: table-cell;
+            letter-spacing: 3px;
+            font-size: 16px;
+         }
+         #buttons {
+            margin-bottom: 20px;
+            margin-top: 35px;
+            text-align: center;
+         }
+         #buttons input {
+            margin-left: 1em;
+         }
+         #message_counter {
+            margin-right: 1em;
+         }
+         #feedback {
+            height: 1em;
+            margin-top: 0em;
+            margin-bottom: 0.5em;
+            text-align: center;
+            font-weight: bold; 
+            color: #CC8844;
+         }
+         /*
+         #instructions {
+            text-align: center;
+            margin-top: 1em;
+            font-weight: bold; 
+         }*/
+      
+#miniPlatformHeader {
+  height: 40px;
+  background-color: #fff;
+  overflow: hidden;
+}
+#miniPlatformHeader img {
+  max-height: 35px;
+  width: auto;
+}
+#miniPlatformHeader h1 {
+  display: inline-block;
+  line-height: 40px;
+  font-size: 16px;
+  margin: 0;
+  vertical-align: top;
+}
+#miniPlatformHeader .platform {
+  font-size: 32px;
+}
+@media screen and (max-width: 800px) {
+
+  #miniPlatformHeader  {
+    font-size: 10px;
+  }
+
+  #miniPlatformHeader h1 {
+    font-size: 12px;
+  }
+
+}
+@media screen and (max-width: 600px) {
+
+  #miniPlatformHeader .platform {
+    font-size: 16px;
+  }
+}</style>
+         <h1 style="display: block;">Piloter la grue</h1>
+         <div id="tabsContainer"></div>
+         <div id="taskContent">
+               <p>
+                  Pilotez la grue aimantée en cliquant sur les boutons numérotés, pour déplacer les blocs comme illustré ci-dessous.
+               </p>
+               <p>
+                  Moins vous ferez d'étapes, plus vous aurez de points.
+               </p>
+            <table id="inputs">
+               <tbody><tr>
+                  <td id="target_container">
+                     <p>
+                        Objectif :
+                     </p>
+                     <div id="target_anim"></div>
+                  </td>
+               </tr>
+            </tbody></table>
+
+            <div id="anim_container">
+               <div id="anim"></div>
+            </div>
+            <!-- FOR TOKENS  <table id="sequence">
+               <tr>
+                  <td id="tokens">
+                     &nbsp;
+                  </td>
+               </tr>
+            </table> -->
+            <p id="feedback">
+            </p>
+            <!--<p id="instructions">
+               Cliquez sur les boutons pour piloter la grue.
+            </p>-->
+
+            
+            <div id="buttons">
+               <span id="message_counter">Nombre d'étapes effectuées : <span id="step_counter"></span>.</span>
+               <input type="button" id="undo" value="Annuler la dernière étape">
+               <!--<input type="button" id="reset" value="Recommencer" />-->
+            </div>
+            <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/magnet.png" style="display:none">           
+            <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/icon.png" style="display:none">
+         </div>
+      </div></div>
+<div id="javascript-2015-JP-04-crane-operating" data-content="
+      var taskStrings = {
+         instructions: &quot;Cliquez sur les boutons numérotés ci-dessus.&quot;,
+         cannotDrop: &quot;Cette case est pleine, la grue ne peut rien y déposer.&quot;,
+         cannotGrab: &quot;Cette case est vide, la grue ne peut rien y prendre.&quot;,
+         success: &quot;Bravo, vous avez réussi !&quot;,
+         successPartial: function(steps, minSteps) { return &quot;Vous avez atteint l'objectif en &quot; + steps + &quot; étapes.&lt;br/&gt; Recommencez pour essayer de ne faire que &quot; + minSteps + &quot; étapes.&quot;; } };
+
+      function initTask() {
+   'use strict';
+   var state = null;
+   var level;
+   var answer = null;
+   var data = {
+      easy: {
+         initial: [&quot;R&quot;, &quot;.&quot;, &quot;B&quot;],
+         target:  [&quot;B&quot;, &quot;.&quot;, &quot;R&quot;],
+         optimal: 6
+      },
+      medium: {
+         initial: [&quot;.&quot;, &quot;R&quot;, &quot;B&quot;, &quot;R&quot;, &quot;B&quot;, &quot;R&quot;, &quot;B&quot;, &quot;.&quot;],
+         target:  [&quot;.&quot;, &quot;B&quot;, &quot;R&quot;, &quot;B&quot;, &quot;R&quot;, &quot;B&quot;, &quot;R&quot;, &quot;.&quot;],
+         optimal: 14
+      },
+      hard: {
+         initial: [&quot;.&quot;, &quot;R&quot;, &quot;R&quot;, &quot;J&quot;, &quot;B&quot;, &quot;B&quot;, &quot;J&quot;, &quot;.&quot;],
+         target:  [&quot;.&quot;, &quot;J&quot;, &quot;J&quot;, &quot;B&quot;, &quot;R&quot;, &quot;R&quot;, &quot;B&quot;, &quot;.&quot;],
+         optimal: 14
+      }
+   };
+   var letterToColor = {
+      &quot;R&quot;:  &quot;#FF0000&quot;,
+      &quot;B&quot;:  &quot;#00AAFF&quot;,
+      &quot;J&quot;:  &quot;#FFFF00&quot;
+   };
+   var disallowedChars = /[^\d\s]/;
+   var examples = {
+      easy:    &quot;1 2 2 1&quot;,
+      medium:  &quot;4 1 6 4&quot;,
+      hard:    &quot;2 8 3 1 5 2&quot;
+   };
+   var maxUserCommands = 20;
+   var digitButtons;
+
+   var initialSlotToBlock;
+   var simulationData = {};
+
+   var animStepTime = 300; // TODO: mettre 500 en easy.
+   var animTimeVertical = animStepTime / 2;
+   var animTimeHorizontal = animStepTime / 2;
+
+   var simulation;
+   var paper;
+   var paperParams = {
+      width: 650,
+      height: 240,
+      centerX: 320,
+      centerY: 160,
+      squareSide: 50,
+      squareAttr: {&quot;r&quot;: 5},
+      lineAttr: {&quot;stroke-width&quot;: 4},
+      blockTextAttr: {&quot;font-size&quot;: 30},
+      numberTextAttr: {&quot;font-size&quot;: 20},
+      buttons: true,
+      buttonContainerAttr: {width: 40, height: 40}
+   };
+   var lineWidth = 4; // old: params.lineAttr[&quot;stroke-width&quot;];
+
+   var armMagnet;
+   var armRope;
+   var armParams = {
+      ceilingWidth: 580,
+      ceilingY: 2,
+      ceilingAttr: {&quot;stroke-width&quot; : 1, &quot;stroke&quot;: &quot;black&quot;, &quot;fill&quot;: &quot;orange&quot;},
+      leftPadding: 40,
+      ropeLength: 20,
+      magnetImage: &quot;https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-JP-04-crane-operating/magnet.png&quot;,
+      magnetWidth: 55,
+      magnetHeight: 54
+   };
+
+   var targetPaper;
+   var targetPaperParams = {
+      /*width:  600,
+      height:  100,
+      centerX: 300,
+      centerY: 40,
+      squareSide:  50,
+      squareAttr: {&quot;r&quot;: 5},
+      lineAttr:  {&quot;stroke-width&quot;: 4},
+      blockTextAttr:  {&quot;font-size&quot;: 30},
+      numberTextAttr:  {&quot;font-size&quot;: 20}*/
+      width:  320,
+      height:  60,
+      centerX: 160,
+      centerY: 20,
+      squareSide:  30,
+      squareAttr: {&quot;r&quot;: 5},
+      lineAttr:  {&quot;stroke-width&quot;: 2},
+      blockTextAttr:  {&quot;font-size&quot;: 16},
+      numberTextAttr:  {&quot;font-size&quot;: 14}
+   };
+
+   task.load = function(views, callback) {
+      initHandlers();
+
+      //displayHelper.hideRestartButton = true;
+      displayHelper.hideValidateButton = true;
+      displayHelper.setupLevels();
+
+      if (views.solutions) {
+         $(&quot;#solution&quot;).show();
+      }
+
+      callback();
+   };
+
+   task.getDefaultStateObject = function() {
+      return { level: &quot;easy&quot; };
+   };
+
+   task.getStateObject = function() {
+      state.level = level;
+      return state;
+   };
+
+   task.reloadStateObject = function(stateObj, display) {
+      state = stateObj;
+      level = state.level;
+
+      if (display) {
+         stopExecution();
+         initTargetPaper();
+         initPaper();
+      }
+   };
+
+   task.reloadAnswerObject = function(answerObj) {
+      stopExecution();
+      answer = answerObj;
+      initSimulationData(simulationData, level);
+      resetPaperPositions();
+
+      $(&quot;#anim&quot;).css(&quot;visibility&quot;, &quot;hidden&quot;);
+      // displaySequence();
+      playAllSteps(true);
+      $(&quot;#anim&quot;).css(&quot;visibility&quot;, &quot;visible&quot;);
+
+      updateButtonDisabled();
+   };
+
+   task.getAnswerObject = function() {
+      return answer;
+   };
+
+   task.getDefaultAnswerObject = function() {
+      return { easy: [], medium: [], hard: []};
+   };
+
+   task.unload = function(callback) {
+      stopExecution();
+      callback();
+   };
+
+   var updateButtonDisabled = function() {
+      var disabled = (answer[level].length === 0);
+      $(&quot;#undo&quot;).attr(&quot;disabled&quot;, disabled);
+      // $(&quot;#reset&quot;).attr(&quot;disabled&quot;, disabled);
+   };
+
+   var initHandlers = function() {
+      /* $(&quot;#reset&quot;).click(function() {
+         stopExecution();
+         answer[level] = [];
+         playAllSteps(true);
+         updateButtonDisabled();
+      }); */
+      $(&quot;#undo&quot;).click(function() {
+         stopExecution();
+         answer[level].pop();
+         playAllSteps(true);
+         updateButtonDisabled();
+      });
+   };
+
+   var initTargetPaper = function() {
+      if (targetPaper) {
+         targetPaper.remove();
+      }
+      targetPaper = new Raphael(&quot;target_anim&quot;, targetPaperParams.width, targetPaperParams.height);
+      drawBlockBase(data[level].target, targetPaper, targetPaperParams);
+   };
+
+   var initPaper = function() {
+      if (paper) {
+         for(var digit in digitButtons) {
+            digitButtons[digit].remove();
+         }
+         paper.remove();
+      }
+      paper = new Raphael(&quot;anim&quot;, paperParams.width, paperParams.height);
+      initialSlotToBlock = drawBlockBase(data[level].initial, paper, paperParams);
+      drawArm();
+      initButtons();
+   };
+
+   var initButtons = function() {
+      for(var digit in digitButtons) {
+         digitButtons[digit].click(clickDigit(digit));
+      }
+   };
+
+   var clickDigit = function(digit) {
+      var handler = function() {
+         if(simulationData.simulation &amp;&amp; simulationData.simulation.isPlaying()) {
+            return;
+         }
+         playStep(digit);
+      };
+      return handler;
+   };
+
+   var drawBlockBase = function(dataArray, paper, params) {
+      var slotToBlock = {};
+      var baseWidth = (params.squareSide + lineWidth) * dataArray.length + lineWidth;
+      var baseHeight = params.squareSide + lineWidth;
+      var leftEdge = params.centerX - baseWidth / 2;
+      var bottomEdge = params.centerY + baseHeight / 2;
+      var rightEdge = leftEdge + baseWidth;
+      var topEdge = bottomEdge - baseHeight;
+
+      var iSlot, xPos, yPos, text;
+
+      // Floor.
+      paper.path([&quot;M&quot;, leftEdge, bottomEdge, &quot;L&quot;, rightEdge, bottomEdge]).attr(params.lineAttr);
+
+      // Vertical lines between blocks.
+      for (var iColumn = 0; iColumn &lt;= dataArray.length; iColumn++) {
+         var posX = leftEdge + iColumn * (params.squareSide + lineWidth) + lineWidth / 2;
+         var posY = topEdge + 3 * params.squareSide / 4;
+         paper.path([&quot;M&quot;, posX, posY, &quot;L&quot;, posX, bottomEdge]).attr(params.lineAttr);
+      }
+
+      // Blocks.
+      for (iSlot = 0; iSlot &lt; dataArray.length; iSlot++) {
+         var slotPosition = slotToPosition(level, params, iSlot);
+         xPos = slotPosition.xPos;
+         yPos = slotPosition.yPos;
+
+         if (dataArray[iSlot] == &quot;.&quot;) {
+            continue;
+         }
+
+         var rect = paper.rect(xPos, yPos, params.squareSide, params.squareSide);
+         rect.attr({
+            &quot;fill&quot;: letterToColor[dataArray[iSlot]]
+         });
+         rect.attr(params.squareAttr);
+
+         text = paper.text(xPos + params.squareSide / 2, yPos + params.squareSide / 2, dataArray[iSlot]);
+         text.attr(params.blockTextAttr);
+
+         slotToBlock[iSlot] = [rect, text];
+      }
+
+      
+      // Slot numbering or buttons.
+      if(params.buttons) {
+         // When creating the target, we must not touch digitButtons.
+         digitButtons = [];
+      }
+      for (iSlot = 0; iSlot &lt; dataArray.length; iSlot++) {
+         xPos = leftEdge + iSlot * (params.squareSide + lineWidth) + lineWidth + params.squareSide / 2;
+         yPos = bottomEdge + lineWidth + params.numberTextAttr[&quot;font-size&quot;];
+
+         if (!params.buttons) { // for target
+            text = paper.text(xPos, yPos, (iSlot + 1));
+            text.attr(params.numberTextAttr);
+         } else { // for main
+            xPos -= params.buttonContainerAttr.width / 2;
+            yPos -= params.buttonContainerAttr.height / 2 - 5; // - 5 for padding
+            var button = new Button(paper, xPos, yPos, params.buttonContainerAttr.width, params.buttonContainerAttr.height, parseInt(iSlot) + 1);
+            digitButtons.push(button);
+         }  
+      }
+
+      /*
+      if (params == paperParams) {
+         xPos = leftEdge - 56;
+         yPos = bottomEdge + 27;
+         paper.text(xPos, yPos, &quot;Cliquez sur\nles boutons : &quot;).attr({&quot;font-size&quot;: 16, &quot;font-weight&quot;: &quot;bold&quot;, &quot;fill&quot;: &quot;#FF3333&quot;});
+      }*/
+
+      return slotToBlock;
+   };
+
+   var slotToPosition = function(level, params, slot) {
+      if(!level) {
+         return {xPos: 0, yPos: 0};
+      }
+      var baseWidth = (params.squareSide + lineWidth) * data[level].initial.length + lineWidth;
+      var baseHeight = params.squareSide + lineWidth;
+      var leftEdge = params.centerX - baseWidth / 2;
+      var bottomEdge = params.centerY + baseHeight / 2;
+      var rightEdge = leftEdge + baseWidth;
+      var topEdge = bottomEdge - baseHeight;
+
+      return {
+         xPos: leftEdge + slot * (params.squareSide + lineWidth) + lineWidth,
+         yPos: topEdge + lineWidth / 2
+      };
+   };
+
+   var drawArm = function() {
+      var leftEdge = paperParams.width / 2 - armParams.ceilingWidth / 2;
+      var rightEdge = leftEdge + armParams.ceilingWidth;
+
+      // paper.path([&quot;M&quot;, leftEdge, armParams.ceilingY, &quot;L&quot;, rightEdge, armParams.ceilingY]).attr(armParams.ceilingAttr);
+      var ceilingHeight = 8;
+      paper.rect(leftEdge, armParams.ceilingY, rightEdge-leftEdge, ceilingHeight).attr(armParams.ceilingAttr);
+
+      armParams.armX = leftEdge + armParams.leftPadding;
+      armRope = paper.path([&quot;M&quot;, armParams.armX, armParams.ceilingY, &quot;L&quot;, armParams.armX, armParams.ceilingY + armParams.ropeLength]);
+
+      armParams.magnetX = armParams.armX - armParams.magnetWidth / 2;
+      armParams.magnetY = armParams.ceilingY + armParams.ropeLength;
+     
+      // with png image... 
+      armMagnet = paper.image(armParams.magnetImage, armParams.magnetX, armParams.magnetY, armParams.magnetWidth, armParams.magnetHeight);
+
+      /* svg image
+      var armMagnet = paper.set();
+      var path3144 = paper.path(&quot;m0.570251,55.542221l-0.069092,-19.435974c-0.0634,-17.845062 14.532913,-35.998962 27.640945,-35.598846c13.108047,0.400131 27.46846,17.207123 27.354614,35.598846l0.205948,19.460953l-12.682236,0.000336l-0.011292,-19.461288c-0.512833,-9.964554 -6.865524,-22.041916 -15.493393,-21.744858c-8.410645,0.289597 -14.582611,12.360153 -14.584702,21.744858l-0.003998,19.471451l-12.356796,-0.035477z&quot;).attr({id: 'path3144',parent: 'layer1',fill: '#d40000',stroke: '#000000',&quot;stroke-width&quot;: '2',&quot;stroke-linecap&quot;: 'butt',&quot;stroke-linejoin&quot;: 'miter',&quot;stroke-miterlimit&quot;: '4',&quot;stroke-opacity&quot;: '1',&quot;stroke-dasharray&quot;: 'none'});
+      var path3928 = paper.path(&quot;m43.695038,49.199799l0,-5.662125l5.547256,0l5.547241,0l0,5.662125l0,5.662125l-5.547241,0l-5.547256,0l0,-5.662125z&quot;).attr({id: 'path3928',parent: 'layer1',fill: '#b3b3b3',&quot;fill-opacity&quot;: '1',&quot;fill-rule&quot;: 'evenodd',stroke: '#b3b3b3',&quot;stroke-width&quot;: '1',&quot;stroke-linecap&quot;: 'butt',&quot;stroke-linejoin&quot;: 'miter',&quot;stroke-miterlimit&quot;: '10',&quot;stroke-opacity&quot;: '1',&quot;stroke-dasharray&quot;: 'none',&quot;stroke-dashoffset&quot;: '0'});
+      var path3934 = paper.path(&quot;m1.090225,49.199799l0,-5.662125l5.547241,0l5.547241,0l0,5.662125l0,5.662125l-5.547241,0l-5.547241,0l0,-5.662125z&quot;).attr({id: 'path3934',parent: 'layer1',fill: '#b3b3b3',&quot;fill-opacity&quot;: '1',&quot;fill-rule&quot;: 'evenodd',stroke: '#b3b3b3',&quot;stroke-width&quot;: '1',&quot;stroke-linecap&quot;: 'butt',&quot;stroke-linejoin&quot;: 'miter',&quot;stroke-miterlimit&quot;: '10',&quot;stroke-opacity&quot;: '1',&quot;stroke-dasharray&quot;: 'none',&quot;stroke-dashoffset&quot;: '0'});
+      armMagnet.push(path3144, path3928, path3934);    
+      */
+
+      armParams.ropeExtension = slotToPosition(level, paperParams, 0).yPos - (armParams.ceilingY + armParams.ropeLength) - armParams.magnetHeight;
+   };
+
+   var getResultAndMessage = function(input, level) {
+      var simulationData = {};
+      initSimulationData(simulationData, level);
+      var success = createSimulation(simulationData, input);
+      if (!success) {
+         return {
+            result: &quot;invalid_command&quot;
+         };
+      }
+      var finalArray = simulationData.currentArray;
+      if (!(Beav.Object.eq(data[level].target, finalArray))) {
+         return {
+            result: &quot;wrong&quot;
+         };
+      }
+      if (input.length &gt; data[level].optimal) {
+         return {
+            result: &quot;suboptimal&quot;,
+            steps: input.length,
+            minSteps: data[level].optimal
+         };
+      }
+      return {
+         result: &quot;optimal&quot;
+      };
+   };
+
+   var resetPaperPositions = function() {
+      $(&quot;#feedback&quot;).html(&quot;&quot;);
+      if (answer[level].length === 0) {
+         $(&quot;#feedback&quot;).html(taskStrings.instructions);
+      }
+
+      for (var iSlot in initialSlotToBlock) {
+         initialSlotToBlock[iSlot][0].attr({
+            x: slotToPosition(level, paperParams, iSlot).xPos,
+            y: slotToPosition(level, paperParams, iSlot).yPos
+         });
+         initialSlotToBlock[iSlot][1].attr({
+            x: slotToPosition(level, paperParams, iSlot).xPos + paperParams.squareSide / 2,
+            y: slotToPosition(level, paperParams, iSlot).yPos + paperParams.squareSide / 2
+         });
+      }
+
+      armRope.attr({
+         path: [&quot;M&quot;, armParams.armX, armParams.ceilingY, &quot;L&quot;, armParams.armX, armParams.ceilingY + armParams.ropeLength]
+      });
+      // with SVG:
+      // armMagnet.transform(&quot;t&quot; + armParams.magnetX + &quot;,&quot; + armParams.magnetY);
+      armMagnet.attr({
+         x: armParams.magnetX,
+         y: armParams.magnetY
+      });
+   };
+
+   var playAllSteps = function(expedite) {
+      resetPaperPositions();
+      displaySequence();
+      initSimulationData(simulationData, level);
+      if(answer[level].length === 0) {
+         return;
+      }
+      createSimulation(simulationData, answer[level]);
+      simulationData.simulation.setAutoPlay(true);
+      simulationData.simulation.setExpedite(expedite);
+      simulationData.simulation.play();
+   };
+
+   var playStep = function(digit, expedite) {
+      $(&quot;#feedback&quot;).html(&quot;&quot;);
+      var result = createStep(simulationData, digit);
+      if (! result.success) {
+         $(&quot;#feedback&quot;).html(result.message);
+         return;
+      }
+      answer[level].push(digit);
+      displaySequence();
+      simulationData.simulation.gotoLastStep();
+      var step = new SimulationStep();
+      step.addEntry({
+         name: &quot;validate&quot;,
+         action: {
+            onExec: function(params, duration, callback) {
+               if (simulationData.success) {
+                  platform.validate(&quot;done&quot;);
+               }
+               callback();
+            }
+         }
+      });
+      simulationData.simulation.addStep(step);
+      simulationData.simulation.setAutoPlay(true);
+      simulationData.simulation.setExpedite(expedite);
+      simulationData.simulation.play();
+      updateButtonDisabled();
+   };
+
+   var initSimulationData = function(simulationData, level) {
+      simulationData.currentArray = $.extend([], data[level].initial);
+      simulationData.currentMagnetLetter = null;
+      simulationData.simulation = new Simulation();
+      simulationData.currentMagnetBlock = null;
+      simulationData.currentSlotToBlock = $.extend({}, initialSlotToBlock);
+      simulationData.magnetSlot = null;
+      simulationData.success = false;
+   };
+
+   var createSimulation = function(simulationData, input) {
+      simulationData.simulation = new Simulation();
+      for (var iDigit in input) {
+         var result = createStep(simulationData, input[iDigit]);
+         if (! result.success) {
+            return false;
+         }
+      }
+      return true;
+   };
+
+   var createStep = function(simulationData, slot) {
+      var step = new SimulationStep();
+      if(simulationData.magnetSlot === slot) {
+         simulationData.animTimeHorizontal = 0;
+      }
+      else{
+         simulationData.animTimeHorizontal = animTimeHorizontal;
+         simulationData.magnetSlot = slot;
+      }
+      simulateArmHorizontal(step, slot);
+      if (simulationData.currentMagnetLetter) {
+         simulateBlockHorizontal(step, slot);
+      }
+
+      var targetFree = (simulationData.currentArray[slot] == &quot;.&quot;);
+      var craneFree = (simulationData.currentMagnetLetter === null);
+      if (!targetFree &amp;&amp; craneFree) {
+         simulatePickup(step, slot);
+         simulationData.currentMagnetLetter = simulationData.currentArray[slot];
+         simulationData.currentArray[slot] = &quot;.&quot;;
+      } else if (targetFree &amp;&amp; !craneFree) {
+         simulateDrop(step, slot);
+         simulationData.currentArray[slot] = simulationData.currentMagnetLetter;
+         simulationData.currentMagnetLetter = null;
+      } else if (!targetFree &amp;&amp; !craneFree) {
+         return { success: false, message: taskStrings.cannotDrop };
+      } else if (targetFree &amp;&amp; craneFree) {
+         return { success: false, message: taskStrings.cannotGrab };
+      }
+      simulateCheckFinish(step, $.extend([], simulationData.currentArray));
+      simulationData.simulation.addStep(step);
+      return {success: true};
+   };
+
+   var simulateHighlight = function(step, iToken) {
+      var highlightToken = function(params, duration, callback) {   
+         /* FOR TOKENS
+         $(&quot;#tokens span&quot;).removeClass(&quot;highlighted&quot;);
+         $(&quot;#token&quot; + params).addClass(&quot;highlighted&quot;);
+          */
+         callback();
+      };
+      step.addEntry({
+         name: &quot;highlight&quot;,
+         action: {
+            onExec: highlightToken,
+            params: iToken
+         }
+      });
+   };
+
+   var simulateArmHorizontal = function(step, slot) {
+      var animTime = simulationData.animTimeHorizontal;
+      var moveMagnetX = function(params, duration, callback) {
+         var magnetTargetX = slotToPosition(level, paperParams, slot).xPos + paperParams.squareSide / 2 - armParams.magnetWidth / 2;
+         return genericAnimation(armMagnet, {x: magnetTargetX}, duration, callback);
+      };
+
+      var moveRopeX = function(params, duration, callback) {
+         var ropeTargetX = slotToPosition(level, paperParams, slot).xPos + paperParams.squareSide / 2;
+         var path = [&quot;M&quot;, ropeTargetX, armParams.ceilingY, &quot;L&quot;, ropeTargetX, armParams.ceilingY + armParams.ropeLength];
+         return genericAnimation(armRope, {path: path}, duration, callback);
+      };
+
+      step.addEntry({
+         name: &quot;magnetSide&quot;,
+         action: {
+            onExec: moveMagnetX,
+            duration: animTime
+         }
+      });
+      step.addEntry({
+         name: &quot;ropeSide&quot;,
+         action: {
+            onExec: moveRopeX,
+            duration: animTime
+         }
+      });
+   };
+
+   var simulatePickup = function(step, slot) {
+      var down = getArmVerticalEntries(step, slot, &quot;down&quot;);
+      var up = getArmVerticalEntries(step, slot, &quot;up&quot;);
+      up = up.concat(getBlockVerticalEntries(step, slot, &quot;up&quot;));
+      step.addEntriesAllParents(down);
+      step.addEntriesAllParents(up);
+   };
+
+   var simulateDrop = function(step, slot) {
+      var down = getArmVerticalEntries(step, slot, &quot;down&quot;);
+      down = down.concat(getBlockVerticalEntries(step, slot, &quot;down&quot;));
+      var up = getArmVerticalEntries(step, slot, &quot;up&quot;);
+
+      step.addEntriesAllParents(down);
+      step.addEntriesAllParents(up);
+   };
+
+   var getArmVerticalEntries = function(step, slot, direction) {
+      var magnetTargetY = armParams.magnetY;
+      var ropeTargetLength = armParams.ropeLength;
+      if (direction == &quot;down&quot;) {
+         magnetTargetY += armParams.ropeExtension;
+         ropeTargetLength += armParams.ropeExtension;
+      }
+
+      var moveMagnetY = function(params, duration, callback) {
+         return genericAnimation(armMagnet, {y: magnetTargetY}, duration, callback);
+      };
+
+      var changeRopeLength = function(params, duration, callback) {
+         var xPos = slotToPosition(level, paperParams, slot).xPos + paperParams.squareSide / 2;
+         var path = [&quot;M&quot;, xPos, armParams.ceilingY, &quot;L&quot;, xPos, armParams.ceilingY + ropeTargetLength];
+         return genericAnimation(armRope, {path: path}, duration, callback);
+      };
+
+      var magnetEntry = {
+         name: &quot;magnet&quot; + direction,
+         action: {
+            onExec: moveMagnetY,
+            duration: animTimeVertical
+         }
+      };
+      var ropeEntry = {
+         name: &quot;rope&quot; + direction,
+         action: {
+            onExec: changeRopeLength,
+            duration: animTimeVertical
+         }
+      };
+      return [magnetEntry, ropeEntry];
+   };
+
+   var getBlockVerticalEntries = function(step, slot, direction) {
+      var rectTargetY, textTargetY;
+      if (direction == &quot;down&quot;) {
+         rectTargetY = slotToPosition(level, paperParams, 0).yPos;
+      } else {
+         rectTargetY = armParams.magnetY + armParams.magnetHeight;
+      }
+      textTargetY = rectTargetY + paperParams.squareSide / 2;
+
+      var updateMagnetBlock = function(params, duration, callback) {
+         if (direction == &quot;down&quot;) {
+            simulationData.currentSlotToBlock[slot] = simulationData.currentMagnetBlock;
+            simulationData.currentMagnetBlock = null;
+         } else {
+            simulationData.currentMagnetBlock = simulationData.currentSlotToBlock[slot];
+            delete simulationData.currentSlotToBlock[slot];
+         }
+         callback();
+      };
+
+      var rectEntry = {
+         name: &quot;rect&quot; + direction,
+         action: {
+            onExec: moveBlockRect,
+            duration: animTimeVertical,
+            params: {
+               y: rectTargetY
+            }
+         },
+         parents: [&quot;state_update&quot;]
+      };
+      var textEntry = {
+         name: &quot;text&quot; + direction,
+         action: {
+            onExec: moveBlockText,
+            duration: animTimeVertical,
+            params: {
+               y: textTargetY
+            }
+         },
+         parents: [&quot;state_update&quot;]
+      };
+      var stateEntry = {
+         name: &quot;state_update&quot;,
+         action: {
+            onExec: updateMagnetBlock
+         }
+      };
+
+      if (direction == &quot;down&quot;) {
+         return [rectEntry, textEntry, stateEntry];
+      } else {
+         return [stateEntry, rectEntry, textEntry];
+      }
+   };
+
+   var simulateBlockHorizontal = function(step, slot) {
+      var animTime = simulationData.animTimeHorizontal;
+      var xPos = slotToPosition(level, paperParams, slot).xPos;
+      var rectHorizontalEntry = {
+         name: &quot;rectHorizontal&quot;,
+         action: {
+            onExec: moveBlockRect,
+            duration: animTime,
+            params: {
+               x: xPos
+            }
+         }
+      };
+      var textHorizontalEntry = {
+         name: &quot;textSide&quot;,
+         action: {
+            onExec: moveBlockText,
+            duration: animTime,
+            params: {
+               x: xPos + paperParams.squareSide / 2
+            }
+         }
+      };
+      step.addEntry(rectHorizontalEntry);
+      step.addEntry(textHorizontalEntry);
+   };
+
+   var moveBlockRect = function(params, duration, callback) {
+      return genericAnimation(simulationData.currentMagnetBlock[0], params, duration, callback);
+   };
+
+   var moveBlockText = function(params, duration, callback) {
+      return genericAnimation(simulationData.currentMagnetBlock[1], params, duration, callback);
+   };
+
+   var genericAnimation = function(object, params, duration, callback) {
+      if(duration === 0) {
+         object.attr(params);
+         callback();
+      }
+      else {
+         return object.animate(params, duration, callback);
+      }
+   };
+
+   var displaySequence = function() {
+      $(&quot;#step_counter&quot;).html(answer[level].length);
+      return;
+   /*
+   // FOR TOKENS
+      var tokensHTML = &quot;&quot;;
+      var tokens = answer[level];
+      for (var iToken in tokens) {
+         tokensHTML += &quot;&lt;span id=\&quot;token&quot; + iToken + &quot;\&quot;&gt;&quot; + (parseInt(tokens[iToken]) + 1);
+         if(iToken % 2 === 0) {
+            tokensHTML += &quot;&amp;#8593;&quot;;
+         }
+         else {
+            tokensHTML += &quot;&amp;#8595;&quot;;
+         }
+         tokensHTML += &quot;&lt;/span&gt;&amp;nbsp;&amp;nbsp;&quot;;
+      }
+
+      $(&quot;#tokens&quot;).html(tokensHTML);
+   */
+   };
+
+   var simulateCheckFinish = function(step, currentArray) {
+      step.addEntryAllParents({
+         name: &quot;validate&quot;,
+         action: {
+            onExec: function(params, duration, callback) {
+               if (!simulationData.simulation.expediting) {
+                  if ((Beav.Object.eq(data[level].target, currentArray))) {
+                     simulationData.success = true;
+                  }
+               }
+               callback();
+            }
+         }
+      });
+   };
+
+   var stopExecution = function() {
+      if (simulationData.simulation) {
+         simulationData.simulation.stop();
+      }
+   };
+
+   grader.gradeTask = function(strAnswer, token, callback) {
+      task.getLevelGrade(strAnswer, token, callback, null);
+   };
+
+   task.getLevelGrade = function(strAnswer, token, callback, gradedLevel) {
+      var taskParams = displayHelper.taskParams;
+      var scores = {};
+      var messages = {};
+      var maxScores = displayHelper.getLevelsMaxScores();
+
+      if (strAnswer === '') {
+         callback(taskParams.minScore, '');
+         return;
+      }
+      var answer = $.parseJSON(strAnswer);
+      // clone the state to restore after grading.
+      var oldState = $.extend({}, task.getStateObject());
+      for (var curLevel in data) {
+         state.level = curLevel;
+         task.reloadStateObject(state, false);
+
+         var resultAndMessage = getResultAndMessage(answer[curLevel], curLevel);
+         var result = resultAndMessage.result;
+         var relativeScore = 0.0;
+         if (result == &quot;error&quot;) {
+            messages[curLevel] = resultAndMessage.message;
+         } else if (result == &quot;wrong&quot;) {
+            // Note: normally should never be displayed; only used if the answer is boggus.
+            messages[curLevel] = &quot;La configuration finale ne correspond pas à l'objectif.&quot;;
+         } else if (result == &quot;invalid_command&quot;) {
+            scores[curLevel] = taskParams.noScore;
+            // Note: normally should never be displayed; only used if the answer is boggus.
+            messages[curLevel] = &quot;Commande invalide : chaque commande doit permettre à la grue de prendre ou poser un bloc.&quot;;
+         } else if (result == &quot;suboptimal&quot;) {
+            if (resultAndMessage.steps &lt;= resultAndMessage.minSteps + 2) {
+               relativeScore = 6/10;
+            } else {
+               relativeScore = 3/10;
+            }
+            messages[curLevel] = taskStrings.successPartial(resultAndMessage.steps, resultAndMessage.minSteps);
+         } else if(result == &quot;optimal&quot;) {
+            relativeScore = 1.0;
+            messages[curLevel] = taskStrings.success;
+         }
+         scores[curLevel] = levelScoreInterpolate(maxScores, curLevel, relativeScore); 
+      }
+
+      task.reloadStateObject(oldState, false);
+      if (!gradedLevel) {
+         displayHelper.sendBestScore(callback, scores, messages);
+      } else {
+         callback(scores[gradedLevel], messages[gradedLevel]);
+      }
+   };
+}
+initTask();
+
+"></div>
+<div class="js-module-2015-JP-04-crane-operating" data-content="httpcodejquerycomjquery171minjs"></div>
+<div class="js-module-2015-JP-04-crane-operating" data-content="jqueryuitouchpunchminjs"></div>
+<div class="js-module-2015-JP-04-crane-operating" data-content="httpcdnjscloudflarecomajaxlibsraphael221raphaelminjs"></div>
+<div class="js-module-2015-JP-04-crane-operating" data-content="httpsgithubcomdouglascrockfordJSONjs"></div>
+<div class="js-module-2015-JP-04-crane-operating" data-content="httpwwwfranceioiorgmodulespemFioibeavertaskjs"></div>
+<div class="js-module-2015-JP-04-crane-operating" data-content="httpwwwfranceioiorgmodulespemFioibeav10js"></div>
+<div class="js-module-2015-JP-04-crane-operating" data-content="httpwwwfranceioiorgmodulespemFioisimulation10js"></div>
+<div class="js-module-2015-JP-04-crane-operating" data-content="httpwwwfranceioiorgmodulespemFioiraphaelButton10js"></div>
+<div class="js-module-2015-JP-04-crane-operating" data-content="httpwwwfranceioiorgmodulesintegrationAPI01officialplatformprjs"></div>
+<div class="js-module-2015-JP-04-crane-operating" data-content="httpwwwfranceioiorgmodulesintegrationAPI01installationAPI01pemFioibuttonsAndMessagesjs"></div>
+<div class="css-module-2015-JP-04-crane-operating" data-content="httpwwwfranceioiorgmodulespemFioitaskStyles01css"></div>
+<div id="question-2015-CZ-02-relationships" class="question"><div id="task" class="taskView">
+<style>
+         #remark {
+            text-align: center;
+            font-weight: bold;
+         }
+      </style>
+         
+         
+         
+      <div id="zone_012"><div id="zone_0" style="width: 100%; max-height: 93px;"><h1 style="display: block;">Relations d'âge<span></span><span id="titleStars" class="stars"><svg height="22.799999999999997" version="1.1" width="96" xmlns="" style="display:none"><div id="popupMessage"></div><center id="showSolutionButton"><button type="button" class="btn btn-default" onclick="miniPlatformShowSolution()">Voir la solution</button></center></div></div>
+<div id="javascript-2015-CZ-02-relationships" data-content="
+         var stringsLanguage = 'fr';
+       
+         var respEnabled = Beav.Navigator.supportsResponsive();
+         // var respEnabled = false;
+         if(respEnabled){
+            importModules(['buttonsAndMessages_resp','taskStyles-0.3_M']);
+            window.FontsLoader.loadFonts(['fontawesome']);
+            task.getMetaData = function(cb) { cb({nbHints: 0, autoHeight: true}); }
+         }else{
+            importModules(['buttonsAndMessages','taskStyles-0.1']);
+         }
+      
+         var taskStrings = {
+            introTitle: &quot;Votre mission&quot;,
+            error: &quot;Le castor au début de la flèche rouge est plus âgé que celui à la fin de la flèche.&quot;,
+            remains: &quot;Il vous reste des étiquettes à placer.&quot;,
+            success: &quot;Bravo, vous avez réussi !&quot;,
+            names: {
+               easy: [&quot;Julie\n8 ans&quot;, &quot;Ahmed\n11 ans&quot;, &quot;Sarah\n12 ans&quot;, &quot;Kim\n14 ans&quot;, &quot;Léa\n15 ans&quot;],
+               medium: [&quot;Julie\n8 ans&quot;, &quot;Ahmed\n11 ans&quot;, &quot;Sarah\n12 ans&quot;, &quot;Kim\n14 ans&quot;, &quot;Léa\n15 ans&quot;,  &quot;Lise\n16 ans&quot;, &quot;Théo\n17 ans&quot;, &quot;Yann\n20 ans&quot;],
+               hard: [&quot;Julie\n8 ans&quot;, &quot;Ahmed\n11 ans&quot;, &quot;Sarah\n12 ans&quot;, &quot;Kim\n14 ans&quot;, &quot;Léa\n15 ans&quot;, &quot;Lise\n16 ans&quot;, &quot;Théo\n17 ans&quot;] 
+            }
+         };
+      function initTask (subTask) {
+   'use strict';
+   var level;
+   var state = {};
+   var answer = null;
+
+   var paper = null;
+   var drawnEdges = null;
+   var difficulty;
+   var castors;
+   var containers;
+   var nbCastors = 5;
+   var animWidth = 700;
+   var animHeight = {
+      easy: 320,
+      medium: 500,
+      hard: 500
+   };
+   var tailleLettreCastor = 20;
+   var cellHeight = 60;
+   var cellWidth = 80;
+   var beaverInCell = [[], []];
+   var selectedCastor;
+
+   var names = taskStrings.names;
+   var positions = {
+      easy: [
+         [150, 120],
+         [300, 40],
+         [300, 190],
+         [450, 190],
+         [450, 40]
+      ],
+      medium: [
+         [170, 60],
+         [560, 60],
+         [360, 150],
+         [560, 180],
+         [360, 300],
+         [560, 400],
+         [360, 400],
+         [170, 400]
+      ],
+      hard: [
+         [170, 20],
+         [560, 20],
+         [360, 110],
+         [560, 140],
+         [360, 260],
+         [560, 330],
+         [360, 360],
+         [170, 180]
+      ]
+   };
+   var edges = {
+      easy: [
+         [0, 1],
+         [1, 2],
+         [0, 2],
+         [2, 3],
+         [3, 4]
+      ],
+      medium: [
+         [0, 1],
+         [0, 2],
+         [1, 2],
+         [2, 3],
+         [2, 4],
+         [2, 5],
+         [4, 7],
+         [4, 5],
+         [6, 7],
+         [5, 6],
+         [3, 4]
+      ],
+      hard: [
+         [0, 1],
+         [0, 2],
+         [1, 2],
+         [2, 3],
+         [2, 4],
+         [5, 2],
+         [7, 4],
+         [4, 5],
+         [6, 7],
+         [5, 6],
+         [3, 4]
+      ]
+   };
+   var nbToPlace = {
+      easy: 5,
+      medium: 8,
+      hard: 7
+   };
+   var nbNodes;
+   var nbEdges;
+   var dxText = cellWidth / 2;
+   var dyText = cellHeight / 2;
+
+   var oldIE = false;
+   if (/MSIE\s([\d.]+)/.test(navigator.userAgent))
+      oldIE = parseInt(RegExp.$1, 10) &lt;= 8;
+
+   subTask.loadLevel = function(curLevel) {
+      if(respEnabled){
+          displayHelper.responsive = true;
+          convertDOM();
+       }else{
+          displayHelper.responsive = false;
+       }
+      level = curLevel;
+      displayHelper.customValidate = checkResult;
+
+      nbNodes = positions[level].length;
+      nbEdges = edges[level].length;
+
+      displayHelper.taskH = animHeight[level] + 30;
+      displayHelper.taskW = animWidth;
+      displayHelper.minTaskW = 500;
+      displayHelper.maxTaskW = 900;
+   };
+
+   subTask.getStateObject = function() {
+      return state;
+   };
+
+   subTask.reloadAnswerObject = function(answerObj) {
+      answer = answerObj;
+      if(!answer)
+         return
+   };
+
+   subTask.getAnswerObject = function() {
+      return answer;
+   };
+
+   subTask.getDefaultAnswerObject = function() {
+      var defaultAnswer = [];
+      for (var iBeaver = 0; iBeaver &lt; names[level].length; iBeaver++) {
+         defaultAnswer.push([0, iBeaver]);
+      }
+      return defaultAnswer;
+   };
+
+   var getResultAndMessage = function() {
+      var result = checkResult(true);
+      return result
+   };
+
+   subTask.unloadLevel = function(callback) {
+      stopAnimation();
+      callback();
+   };
+
+   subTask.getGrade = function(callback) {
+      callback(getResultAndMessage());
+   };
+
+   subTask.resetDisplay = function() {
+      displayError(&quot;&quot;);
+      drawPaper();
+      cleanEdges();
+      reloadAnswer();
+   };
+
+   var reloadAnswer = function() {
+      cleanEdges();
+      var castorPos = answer;
+
+      beaverInCell = [[], []];
+      for (var iType = 0; iType &lt; 2; iType++) {
+         for (var iNode = 0; iNode &lt; nbNodes; iNode++) {
+            beaverInCell[iType].push(-1);
+         }
+      }
+      for (var iCastor = 0; iCastor &lt; names[level].length; iCastor++) {
+         beaverInCell[castorPos[iCastor][0]][castorPos[iCastor][1]] = iCastor;
+      }
+
+      for (iCastor = 0; iCastor &lt; names[level].length; iCastor++) {
+         var container = containers[castorPos[iCastor][0]][castorPos[iCastor][1]];
+         var x = container.attrs.x;
+         var y = container.attrs.y;
+         moveCastor(castors[iCastor], x, y);
+      }
+   };
+
+   var animToContainer = function(castor, container) {
+      var x = container.attrs.x;
+      var y = container.attrs.y;
+      if (oldIE) {
+         moveCastor(castor, x, y);
+      } else {
+         castor.cx = x;
+         castor.cy = y;
+         castor.g.animate({transform: 't'+x+','+y}, 100);
+      }
+   };
+
+   var moveCastor = function (castor, cx, cy) {
+      castor.cx = cx;
+      castor.cy = cy;
+      if (Raphael.vml) {
+         castor.g.node.style.left = cx + 'px';
+         castor.g.node.style.top = cy + 'px';
+      } else {
+         castor.g.transform('t'+cx+' '+cy);
+      }
+   };
+
+   var initDragDrop = function(castor) {
+      var g = castor.g, ox, oy;
+
+      var drag_move  = function (dx, dy) {
+         if (window.displayHelper) {
+            var scale = window.displayHelper.scaleFactor || 1;
+         }else{
+            var scale = 1;
+         }
+         dx = dx/scale;
+         dy = dy/scale;
+         if (isNaN(dx) || isNaN(dy)) {
+            return;
+         }
+         moveCastor(castor, ox + dx, oy + dy);
+      };
+
+      var drag_start  = function () {
+         displayError(&quot;&quot;);
+         cleanEdges();
+         g.toFront();
+         ox = castor.cx;
+         oy = castor.cy;
+      };
+
+      var drag_end = function () {
+         var castorPos = answer;
+         var lx = castor.cx + castor.r.attrs.width / 2;
+         var ly = castor.cy + castor.r.attrs.height / 2;
+         for (var objType = 1; objType &lt; 2; objType++) {
+            for (var iObject = 0; iObject &lt; nbNodes; iObject++) {
+               var container = containers[objType][iObject];
+               if (container.isPointInside(lx, ly)) {
+                  moveToContainer(castor.i, objType, iObject);
+                  return;
+               }
+            }
+         }
+         beaverInCell[castorPos[castor.i][0]][castorPos[castor.i][1]] = -1;
+         castorPos[castor.i] = [0, castor.i];
+         animToContainer(castor, containers[0][castor.i]);
+      };
+      g.drag(drag_move, drag_start, drag_end);
+   };
+
+   var moveToContainer = function(iCastor, iType, iContainer) {
+      var castorPos = answer;
+      if (beaverInCell[iType][iContainer] != -1) {
+         var oldCastor = beaverInCell[iType][iContainer];
+         beaverInCell[0][oldCastor] = oldCastor;
+         castorPos[oldCastor] = [0, oldCastor];
+         animToContainer(castors[oldCastor], containers[0][oldCastor]);
+      }
+      beaverInCell[iType][iContainer] = iCastor;
+      beaverInCell[castorPos[iCastor][0]][castorPos[iCastor][1]] = -1;
+      castorPos[iCastor] = [iType, iContainer];
+      animToContainer(castors[iCastor], containers[iType][iContainer]);
+      displayHelper.stopShowingResult();
+   };
+
+   var writeNames = function() {
+      var s = &quot;&lt;table&gt;&lt;tr&gt;&quot;;
+      // assumes an even number of edges
+      for (var col = 0; col &lt; edges[level].length/2; col++) {
+         s += &quot;&lt;td&gt;&lt;ul&gt;&quot;;
+         for (var row = 0; row &lt; 2; row++) {
+            var s1 = names[level][edges[level][2*col+row][0]];
+            var s2 = names[level][edges[level][2*col+row][1]];
+            s += &quot;&lt;li&gt;&quot; + s1 + &quot; et &quot; + s2 + &quot;&lt;/li&gt;&quot;;
+         }
+         s += &quot;&lt;/ul&gt;&lt;/td&gt;&quot;;
+      }
+      s += &quot;&lt;/tr&gt;&lt;/table&gt;&quot;;
+      $(&quot;#relations&quot;).html(s);
+   };
+
+   
+
+   var stopAnimation = function() {
+      if(!castors)
+         return
+      for (var iCastor = 0; iCastor &lt; names[level].length; iCastor++) {
+         var castor = castors[iCastor];
+         castor.g.stop();
+      }
+   };
+
+   var cleanEdges = function() {
+      for (var iEdge = 0; iEdge &lt; drawnEdges.length; iEdge++) {
+         for (var iPath = 0; iPath &lt; drawnEdges[iEdge].length; iPath++) {
+            var path = drawnEdges[iEdge][iPath];
+            path.attr({stroke: 'black', 'stroke-width': 3});
+         }
+      }
+   };
+
+   var drawEdges = function() {
+      drawnEdges = [];
+      for (var iEdge = 0; iEdge &lt; nbEdges; iEdge++) {
+         var edge = edges[level][iEdge];
+         var pos1 = positions[level][edge[0]];
+         var pos2 = positions[level][edge[1]];
+         var x1 = pos1[0] + cellWidth / 2;
+         var y1 = pos1[1] + cellHeight / 2;
+         var x2 = pos2[0] + cellWidth / 2;
+         var y2 = pos2[1] + cellHeight / 2;
+         var xm = (x1 + x2) / 2;
+         var ym = (y1 + y2) / 2;
+         var drawnEdge = [
+            paper.path([&quot;M&quot;, x1, y1, &quot;L&quot;, xm, ym]).attr({'stroke': 'black', 'stroke-width': 3, 'arrow-end': 'classic-wide-long'}),
+            paper.path([&quot;M&quot;, xm, ym, &quot;L&quot;, x2, y2]).attr({'stroke': 'black', 'stroke-width': 3})
+         ];
+         drawnEdges.push(drawnEdge);
+
+      }
+   };
+
+   function makeGroup (elements) {
+      var groupNode, i, j;
+      if (Raphael.vml) {
+         groupNode = document.createElement(&quot;group&quot;);
+         groupNode.style.position = 'absolute';
+      } else {
+         groupNode = document.createElementNS(&quot;http://www.w3.org/2000/svg&quot;, &quot;g&quot;);
+      }
+      paper.canvas.appendChild(groupNode);
+      for (i = 0, j = elements.length; i &lt; j; i++)
+         groupNode.appendChild(elements[i].node);
+      return new Raphael.el.constructor(groupNode, paper);
+   }
+
+   var drawPaper = function() {
+      paper = subTask.raphaelFactory.create(&quot;anim&quot;, &quot;anim&quot;, animWidth, animHeight[level]);
+
+      drawEdges();
+
+      containers = [[],[]];
+      for (var iLin = 0; iLin &lt; nbNodes; iLin++) {
+         containers[1][iLin] = paper.rect(positions[level][iLin][0], positions[level][iLin][1], cellWidth, cellHeight).attr({'fill' : '#F2F2FF'});
+      }
+
+      castors = [];
+      var castorPos = [];
+      for (var iCastor = 0; iCastor &lt; names[level].length; iCastor++) {
+         var x = 20;
+         var y = iCastor*cellHeight + 15;
+         containers[0][iCastor] = paper.rect(x, y, cellWidth, cellHeight).attr({&quot;stroke-dasharray&quot;: &quot;. &quot;, 'fill': '#FFFFFF'});
+         beaverInCell[0][iCastor] = iCastor;
+         beaverInCell[1][iCastor] = -1;
+
+         var r = paper.rect(0, 0, cellWidth, cellHeight, 4).attr({'fill': '#E0E0F8', 'opacity':1});
+         var name = names[level][iCastor];
+         var t = paper.text(dxText, dyText, name).attr(&quot;font-size&quot;, tailleLettreCastor);
+         var b = paper.rect(0, 0, cellWidth, cellHeight, 4).attr({'fill': '#FFFFFF', 'opacity':0});
+         $(t.node).css({
+            &quot;-webkit-touch-callout&quot;: &quot;none&quot;,
+            &quot;-webkit-user-select&quot;: &quot;none&quot;,
+            &quot;-khtml-user-select&quot;: &quot;none&quot;,
+            &quot;-moz-user-select&quot;: &quot;none&quot;,
+            &quot;-ms-user-select&quot;: &quot;none&quot;,
+            &quot;user-select&quot;: &quot;none&quot;,
+            &quot;cursor&quot; : &quot;default&quot;
+         });
+         var g = makeGroup([r, t, b]);
+         castors[iCastor] = {i: iCastor, r: r, t: t, b: b, g: g, cx: x, cy: y};
+
+         initDragDrop(castors[iCastor]);
+      }
+   };
+
+   var allPlaced = function(castorPos) {
+      var nbPlaced = 0;
+      for (var iCastor = 0; iCastor &lt; castorPos.length; iCastor++) {
+         if (castorPos[iCastor][0] == 1) {
+            nbPlaced++;
+         }
+      }
+      return (nbPlaced == nbToPlace[level]);
+   };
+
+   var areEdgesCorrect = function(castorPos, display) {
+      var castorInCell = [];
+      for (var iCastor = 0; iCastor &lt; castorPos.length; iCastor++) {
+         castorInCell[iCastor] = -1;
+      }
+      for (iCastor = 0; iCastor &lt; castorPos.length; iCastor++) {
+         if (castorPos[iCastor][0] == 1) {
+            castorInCell[castorPos[iCastor][1]] = iCastor;
+         }
+      }
+      for (var iEdge = 0; iEdge &lt; edges[level].length; iEdge++) {
+         var edge = edges[level][iEdge];
+         if ((castorInCell[edge[0]] != -1) &amp;&amp; (castorInCell[edge[1]] != -1)) {
+            if (castorInCell[edge[0]] &gt; castorInCell[edge[1]]) {
+               if (display) {
+                  for (var iPath = 0; iPath &lt; drawnEdges[iEdge].length; iPath++) {
+                     var path = drawnEdges[iEdge][iPath];
+                     path.attr({stroke: 'red', 'stroke-width': 5});
+                  }
+               }
+               return false;
+            }
+         }
+      }
+      return true;
+   };
+
+   function checkResult(noVisual) {
+      var castorPos = answer;
+      var message, score;
+      if (! areEdgesCorrect(castorPos, !noVisual)) {
+         score = 0;
+         message = taskStrings.error;
+      } else if (! allPlaced(castorPos)) {
+         score = 0;
+         message = taskStrings.remains;
+      } else {
+         score = 1;
+         message = taskStrings.success;
+      }
+      if(!noVisual &amp;&amp; score &lt; 1){
+         displayError(message);
+      }else 
+      if(!noVisual &amp;&amp; score == 1){
+         platform.validate(&quot;done&quot;);
+      }
+      return { successRate: score, message: message }
+
+   };
+
+   function displayError(msg) {
+      if(respEnabled){
+         displayHelper.displayError(msg);
+      }else{
+         $(&quot;#displayHelper_graderMessage&quot;).html(msg).css({color:&quot;red&quot;,&quot;font-weight&quot;:&quot;bold&quot;});
+      }
+   };
+}
+initWrapper(initTask, [&quot;easy&quot;, &quot;medium&quot;, &quot;hard&quot;],&quot;easy&quot;);
+displayHelper.useFullWidth();
+"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpcodejquerycomjquery171minjs"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="jqueryuitouchpunchminjs"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="raphael221b"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpsgithubcomdouglascrockfordJSONjs"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioibeav10js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioibeavertask20js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioisimulation20js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioiraphaelFactory10js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioidelayFactory10js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioisimulationFactory10js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioirandomGenerator10js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulesextjschanneljschanneljs"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioigrid11js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioigraph10js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioivisualgraph11js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioigraphmouse14js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioidrag_lib21js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulespemFioiraphaelButton10js"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="responsiveDOMConverter"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="fontsloader"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="loaderbuttonsAndMessages"></div>
+<div class="js-module-2015-CZ-02-relationships" data-content="httpwwwfranceioiorgmodulesintegrationAPI01officialplatformprjs"></div>
+<div id="question-2015-CA-02-fireworks" class="question"><div id="task" class="taskView">
+<style>
+         #clear_current {
+            margin-bottom: 1em;
+         }
+         #clear_current_container {
+            text-align: center;
+         }
+      </style>
+         
+         
+         
+     <div id="zone_012"><div id="zone_0" style="width: 100%; max-height: 93px;"><h1 style="display: block;">Signaux colorés<span></span><span id="titleStars" class="stars"><svg height="22.799999999999997" version="1.1" width="96" xmlns="" style="display:none"><div id="popupMessage"></div><center id="showSolutionButton"><button type="button" class="btn btn-default" onclick="miniPlatformShowSolution()">Voir la solution</button></center></div></div>
+<div id="javascript-2015-CA-02-fireworks" data-content="
+         var stringsLanguage = 'fr';
+    
+      var respEnabled = Beav.Navigator.supportsResponsive();
+      // var respEnabled = false;
+      if(respEnabled){
+         importModules(['buttonsAndMessages_resp','taskStyles-0.3_M']);
+         window.FontsLoader.loadFonts(['fontawesome']);
+         task.getMetaData = function(cb) { cb({nbHints: 0, autoHeight: true}); }
+      }else{
+         importModules(['buttonsAndMessages','taskStyles-0.1']);
+      }
+   
+         var taskStrings = { 
+            introTitle: &quot;Votre mission&quot;,
+            availableWords: &quot;Mots disponibles&quot;,
+            clickToAdd: &quot;Cliquez sur un mot\npour l'ajouter&quot;,
+            clickToRemove: &quot;Cliquez sur un mot\npour l'enlever&quot;,
+            otherSequence: &quot;Autre séquence&quot;,
+            yourSequence: &quot;Votre séquence&quot;,
+            message: &quot;Message&quot;,
+            words: [&quot;Barrage&quot;, &quot;Bois&quot;, &quot;Plage&quot;, &quot;Cailloux&quot;, &quot;Fruits&quot;, &quot;Source&quot;, &quot;Grotte&quot;],
+            success: &quot;Bravo, vous avez réussi !&quot;,
+            already: &quot;Vous avez déjà trouvé cette séquence. Cliquez sur les mots pour les retirer.&quot;,
+            tooLong: &quot;Votre séquence de mots est trop longue.&quot;,
+            tooShort: &quot;Votre séquence de mots est trop courte.&quot;,
+            notMatch: &quot;Votre séquence de mots ne correspond pas exactement au message.&quot;,
+            clickLeft: &quot;Cliquez sur les mots à gauche pour construire une séquence.&quot;,
+            foundSoFar: function(nbCompleted) { return &quot;Vous avez trouvé &quot; + nbCompleted + &quot; séquence&quot; + ((nbCompleted&gt;1) ? &quot;s&quot; : &quot;&quot;) + &quot;. Cherchez-en une autre.&quot;; },
+            hint: &quot;&lt;br/&gt;Astuce : vous pouvez utiliser un même mot plusieurs fois.&quot; 
+         };
+      function initTask(subTask) {
+   'use strict';
+   var state = {};
+   var level;
+   var answer = null;
+   var data = {
+      easy: {
+         sequence: &quot;BBRB&quot;,
+         options: [&quot;B&quot;, &quot;BB&quot;, &quot;R&quot;],
+         target: 1 // note that 2 are possible
+      },
+      medium: {
+         sequence: &quot;RRBR&quot;,
+         options: [&quot;R&quot;, &quot;RR&quot;, &quot;B&quot;, &quot;RBR&quot;],
+         target: 3
+      },
+      hard: {
+         sequence: &quot;BRRBBRRRBB&quot;,
+         options: [&quot;RB&quot;, &quot;RRR&quot;, &quot;BRR&quot;, &quot;RBB&quot;, &quot;BR&quot;, &quot;BB&quot;], // BBR can also be given
+         target: 3
+      }
+
+   };
+   var words = taskStrings.words;
+
+   var paper;
+   var paperWidth = 770;
+   var paperHeight = {
+      easy: 230,
+      medium: 330,
+      hard: 545
+      /*
+      hard_bof: 580
+      old_easy: 330,
+      old_medium: 580,
+      old_hard: 530 */
+   };
+   var textParams = {
+      bankTitleAttr: {
+         text: taskStrings.availableWords,
+         x: 70,
+         y: 20,
+         &quot;font-size&quot;: 16,
+         &quot;font-weight&quot;: 600
+      },
+      bankTextAttr: {
+         text: taskStrings.clickToAdd,
+         x: 70,
+         y: 60,
+         &quot;font-size&quot;: 16,
+         &quot;fill&quot;: &quot;#CC2222&quot; // &quot;#337777&quot;
+      },
+      targetTitleAttr: {
+         text: taskStrings.message,
+         x: 210,
+         y: 20,
+         &quot;font-size&quot;: 16,
+         &quot;font-weight&quot;: 600
+      },
+      userSentenceTitle: {
+         text: taskStrings.yourSequence,
+         x: 340,
+         y: 20,
+         &quot;font-size&quot;: 16,
+         &quot;font-weight&quot;: 600
+      },
+      userSentenceText: {
+         text: taskStrings.clickToRemove,
+         x: 340,
+         y: 60,
+         &quot;font-size&quot;: 16,
+         &quot;fill&quot;: &quot;#CC2222&quot;
+      },
+      otherSequence1: {
+         text: taskStrings.otherSequence,
+         x: 520,
+         y: 20,
+         &quot;font-size&quot;: 16,
+         &quot;font-weight&quot;: 600
+      },
+      otherSequence2: {
+         text: taskStrings.otherSequence,
+         x: 680,
+         y: 20,
+         &quot;font-size&quot;: 16,
+         &quot;font-weight&quot;: 600
+      },
+      equalSign: {
+         text: &quot;=&quot;,
+         x: 252,
+         y: 115,
+         &quot;font-size&quot;: 26,
+         &quot;fill&quot;: &quot;black&quot;
+      }
+   };
+   var marginCompleted = 20;
+   var labelBank;
+   var raphaelLabelBank;
+   var bankParams = {
+      xPos: 10,
+      yPos: 100,
+      verticalSpace: 10
+   };
+   var currentSentenceParams = {
+      xPos: 280,
+      yPos: 100,
+      verticalSpace: 0
+   };
+   var marginBorder = 2;
+   var otherSentenceParams = {
+      xPosById: [460, 620],
+      yPos: 100,
+      verticalSpace: 0,
+      otherBorderAttr: {
+         x: -marginBorder,
+         y: 100 - marginBorder,
+         width: 120 + 2*marginBorder,
+         stroke: &quot;black&quot;,
+         &quot;stroke-width&quot;: 3
+      }
+   };
+   var targetParams = {
+      xPos: 200,
+      yPos: 103,
+      borderAttr: {
+         x: 194 - marginBorder,
+         y: 100 - marginBorder,
+         width: 32 + 2*marginBorder,
+         stroke: &quot;black&quot;,
+         &quot;stroke-width&quot;: 3
+      },
+      userBorderAttr: {
+         x: 280 - marginBorder,
+         y: 100 - marginBorder,
+         width: 120 + 2*marginBorder,
+         stroke: &quot;black&quot;,
+         &quot;stroke-width&quot;: 3
+      }
+   };
+   var labelParams = {
+      width: 120,
+      verticalPadding: 3,
+      star: {
+         leftPadding: 5,
+         diameter: 20,
+         verticalSpace: 6,
+         colors: {
+            &quot;R&quot;: &quot;orange&quot;,
+            &quot;B&quot;: &quot;blue&quot;
+         }
+      },
+      xText: 40,
+      textAttr: {
+         &quot;font-size&quot;: 16,
+         &quot;text-anchor&quot;: &quot;start&quot;
+      },
+      backAttr: {
+         &quot;fill&quot;: &quot;#ececec&quot;
+      }
+   };
+
+   var visualSentence;
+   var visualCompleted;
+
+   var numSeeds = 50;
+   var taskSeed;
+   var currentSeedOffsets = {
+      easy: 0,
+      medium: 0,
+      hard: 0
+   };
+   if (typeof(enableRtl) != &quot;undefined&quot;) {
+      var screenWidth = 740;
+      textParams.bankTitleAttr.x = screenWidth - textParams.bankTitleAttr.x;
+      textParams.bankTextAttr.x = screenWidth - textParams.bankTextAttr.x;
+      textParams.targetTitleAttr.x = 535;//screenWidth - textParams.targetTitleAttr.x;
+      textParams.userSentenceTitle.x = screenWidth - textParams.userSentenceTitle.x;
+      textParams.userSentenceText.x = screenWidth - textParams.userSentenceText.x;
+      textParams.otherSequence1.x = 110; //screenWidth - textParams.otherSequence1.x;
+      textParams.otherSequence2.x = 260; //screenWidth - textParams.otherSequence2.x;
+      textParams.equalSign.x = 495; //screenWidth - textParams.equalSign.x;
+      textParams.equalSign.y = 150;
+      bankParams.xPos = 610;
+      currentSentenceParams.xPos = 345;
+      otherSentenceParams.xPosById = [200, 55];
+      targetParams.xPos = 526;
+      targetParams.borderAttr.x = 520 - marginBorder;
+      targetParams.userBorderAttr.x = 345 - marginBorder;
+      labelParams.star.leftPadding = 90;
+      labelParams.xText = 50;
+   }
+
+   subTask.loadLevel = function(curLevel) {
+      if(respEnabled){
+          displayHelper.responsive = true;
+          convertDOM();
+       }else{
+          displayHelper.responsive = false;
+       }
+      level = curLevel;
+      displayHelper.customValidate = checkResult;
+
+      displayHelper.taskH = paperHeight[level] + 70;
+      displayHelper.taskW = paperWidth;
+      displayHelper.minTaskW = 500;
+      displayHelper.maxTaskW = 900;
+   };
+
+   subTask.getStateObject = function() {
+      return state;
+   };
+
+   subTask.reloadAnswerObject = function(answerObj) {
+      answer = answerObj;
+      if(!answer)
+         return
+      labelBank = generateBank(level, answer.seed);
+   };
+
+   subTask.getAnswerObject = function() {
+      return answer;
+   };
+
+   subTask.getDefaultAnswerObject = function() {
+       // TODO: why are the answers array of strings and not just arrays of ints?
+      // currentSeedOffsets[level]++;
+
+      var defaultAnswer = {
+         seed: 1000 + (subTask.taskParams.randomSeed + currentSeedOffsets[level]) % numSeeds,
+         completed: [],
+         current: []
+      };
+      return defaultAnswer
+   };
+
+   var getResultAndMessage = function() {
+      var result = checkResult(true);
+      return result
+   };
+
+   subTask.unloadLevel = function(callback) {
+      callback();
+   };
+
+   subTask.getGrade = function(callback) {
+      callback(getResultAndMessage());
+   };
+
+   subTask.resetDisplay = function() {
+      displayError(&quot;&quot;);
+      initPaper();
+      initHandlers();
+   };
+
+   var initHandlers = function() {
+      $(&quot;#clear_current&quot;).click(clearCurrentMessage);
+   };
+
+   var generateBank = function(level, seed) {
+      var randomGenerator = new RandomGenerator(seed);
+      var randomWords = $.extend([], words);
+      randomGenerator.shuffle(randomWords);
+      var labelBank = [];
+      for (var iOption in data[level].options) {
+         labelBank.push({
+            index: iOption,
+            word: randomWords[iOption],
+            stars: data[level].options[iOption]
+         });
+      }
+      return labelBank;
+   };
+
+   var initPaper = function() {
+      paper = subTask.raphaelFactory.create(&quot;anim&quot;, &quot;anim&quot;, paperWidth, paperHeight[level]);
+      drawBank();
+      drawTarget();
+      drawCurrentSentence();
+      drawCompletedSentences();
+      drawTexts();
+   };
+
+   var drawTexts = function() {
+      paper.text().attr(textParams.bankTitleAttr);
+      paper.text().attr(textParams.bankTextAttr);
+      paper.text().attr(textParams.targetTitleAttr);
+      paper.text().attr(textParams.userSentenceTitle);
+      paper.text().attr(textParams.userSentenceText);
+      paper.text().attr(textParams.equalSign);
+      if (level != &quot;easy&quot;) {
+         paper.text().attr(textParams.otherSequence1);
+         paper.text().attr(textParams.otherSequence2);
+      }
+   };
+
+   var drawBank = function() {
+      raphaelLabelBank = drawLabelList(labelBank, bankParams);
+      for (var iLabel in raphaelLabelBank) {
+         labelApplyRaphael(raphaelLabelBank[iLabel], &quot;click&quot;, [clickBankLabel(iLabel)]);
+      }
+   };
+
+   var drawTarget = function() {
+      var targetHeight = targetParams.yPos + (labelParams.star.diameter + labelParams.star.verticalSpace) * data[level].sequence.length;
+      var height = targetHeight - targetParams.yPos + 2*marginBorder;
+      paper.rect().attr({height: height}).attr(targetParams.borderAttr);
+      paper.rect().attr({height: height}).attr(targetParams.userBorderAttr);
+
+      if (level != &quot;easy&quot;) {
+         var paramsOther1 = $.extend({}, otherSentenceParams.otherBorderAttr);
+         paramsOther1.x += otherSentenceParams.xPosById[0];
+         paper.rect().attr({height: height}).attr(paramsOther1);
+         var paramsOther2 = $.extend({}, otherSentenceParams.otherBorderAttr);
+         paramsOther2.x += otherSentenceParams.xPosById[1];
+         paper.rect().attr({height: height}).attr(paramsOther2);
+      }
+      for (var iStar = 0; iStar &lt; data[level].sequence.length; iStar++) {
+         drawStar(data[level].sequence.charAt(iStar), targetParams.xPos, targetParams.yPos + (labelParams.star.diameter + labelParams.star.verticalSpace) * iStar);
+      }
+   };
+
+   var drawCurrentSentence = function() {
+      var iWord;
+      if (visualSentence) {
+         for (iWord in visualSentence) {
+            removeLabel(visualSentence[iWord]);
+         }
+      }
+      var sentence = answer.current;
+      if (answer.completed.length == data[level].target) {
+         sentence = answer.completed[answer.completed.length - 1];
+      }
+      visualSentence = [];
+      for (iWord in sentence) {
+         addToSentence(sentence[iWord]);
+      }
+   };
+
+   var drawCompletedSentences = function() {
+      var iSentence;
+      if (visualCompleted) {
+         for (iSentence in visualCompleted) {
+            for (var iWord in visualCompleted[iSentence]) {
+               removeLabel(visualCompleted[iSentence][iWord]);
+            }
+         }
+      }
+      visualCompleted = [];
+      for (iSentence in answer.completed) {
+         visualCompleted.push(drawCompletedSentence(iSentence));
+      }
+   };
+
+   var drawCompletedSentence = function(iSentence) {
+      if (iSentence == data[level].target - 1) {
+         return;
+      }
+      var params = $.extend({}, otherSentenceParams);
+      params.xPos = otherSentenceParams.xPosById[iSentence];
+        // += iSentence * (labelParams.width + marginCompleted);
+      var sentence = answer.completed[iSentence];
+      var labelList = [];
+      for (var iWord in sentence) {
+         var iLabel = sentence[iWord];
+         labelList.push(labelBank[iLabel]);
+      }
+      return drawLabelList(labelList, params);
+   };
+
+   var drawLabelList = function(list, listParams) {
+      var result = [];
+      var xPos = listParams.xPos;
+      var yPos = listParams.yPos;
+      for (var iLabel in list) {
+         var element = drawLabel(list[iLabel], xPos, yPos);
+         result.push(element);
+         yPos += element.height + listParams.verticalSpace;
+      }
+      return result;
+   };
+
+   var drawLabel = function(label, xPos, yPos) {
+      var visualLabel = {};
+      visualLabel.xPos = xPos;
+      visualLabel.yPos = yPos;
+      visualLabel.index = label.index;
+      visualLabel.height = labelParams.verticalPadding * 2 + labelParams.star.diameter * label.stars.length + labelParams.star.verticalSpace * (label.stars.length - 1);
+      visualLabel.background = paper.rect(xPos, yPos, labelParams.width, visualLabel.height).attr(labelParams.backAttr);
+      visualLabel.text = paper.text(xPos + labelParams.xText, yPos + visualLabel.height / 2, label.word).attr(labelParams.textAttr);
+      visualLabel.text[0].style.cursor = &quot;default&quot;;
+      visualLabel.stars = [];
+
+      for (var iStar = 0; iStar &lt; label.stars.length; iStar++) {
+         var star = drawStar(label.stars.charAt(iStar), xPos + labelParams.star.leftPadding, yPos + labelParams.verticalPadding + (labelParams.star.diameter + labelParams.star.verticalSpace) * iStar);
+         visualLabel.stars.push(star);
+      }
+
+      return visualLabel;
+   };
+
+   var drawStar = function(type, xPos, yPos) {
+      var size = labelParams.star.diameter;
+      if (type == &quot;R&quot;) {
+         xPos += size / 2;
+         yPos += size / 2;
+         return paper.circle(xPos, yPos, size / 2).attr({fill: labelParams.star.colors[type]});
+      } else if (type == &quot;B&quot;) {
+         var m = 2;
+         return paper.rect(xPos+m, yPos+m, size-2*m, size-2*m).attr({fill: labelParams.star.colors[type]});
+      } // else unsupported
+   };
+
+   var labelApplyRaphael = function(label, funcName, argList) {
+      if (!argList) {
+         argList = [];
+      }
+      label.background[funcName].apply(label.background, argList);
+      label.text[funcName].apply(label.text, argList);
+      for (var iStar in label.stars) {
+         var star = label.stars[iStar];
+         star[funcName].apply(star, argList);
+      }
+   };
+
+   var removeLabel = function(label) {
+      labelApplyRaphael(label, &quot;remove&quot;);
+   };
+
+   var clickBankLabel = function(iLabel) {
+      var handler = function() {
+         displayError(&quot;&quot;);
+         displayHelper.stopShowingResult();
+         if (answer.completed.length === data[level].target ||
+               isTooLong(answer.current, level)) {
+            return;
+         }
+         answer.current.push(iLabel);
+         addToSentence(iLabel);
+      };
+      return handler;
+   };
+
+   var addToSentence = function(iLabel) {
+      var xPos = currentSentenceParams.xPos;
+      var yPos = currentSentenceParams.yPos;
+      if (visualSentence.length &gt; 0) {
+         var previousVisualLabel = visualSentence[visualSentence.length - 1];
+         yPos = previousVisualLabel.yPos + previousVisualLabel.height + currentSentenceParams.verticalSpace;
+      }
+      var visualLabel = drawLabel(labelBank[iLabel], xPos, yPos);
+      labelApplyRaphael(visualLabel, &quot;click&quot;, [removeFromSentence(visualSentence.length)]);
+      visualSentence.push(visualLabel);
+      onSentenceChange();
+   };
+
+   var removeFromSentence = function(iWord) {
+      var handler = function() {
+         answer.current.splice(iWord, 1);
+         drawCurrentSentence();
+         onSentenceChange();
+      };
+      return handler;
+   };
+
+   var clearCurrentMessage = function() {
+      displayError(&quot;&quot;);
+      answer.current = [];
+      drawCurrentSentence();
+   };
+
+   var onSentenceChange = function() {
+      if (isTooLong(answer.current, level)) {
+         // displayHelper.validate(&quot;stay&quot;, function() {});
+         return;
+      }
+      if (!checkSentenceMatch(answer.current, level)) {
+         return;
+      }
+      if (isCurrentDuplicate(answer)) {
+         checkResult();
+         // displayHelper.validate(&quot;stay&quot;, function() {});
+         return;
+      }
+      if (answer.completed === data[level].target) {
+         return;
+      }
+      answer.completed.push(answer.current);
+      answer.current = [];
+      drawCurrentSentence();
+      drawCompletedSentence(answer.completed.length - 1);
+      // platform.validate(&quot;done&quot;, function() {});
+      checkResult();
+   };
+
+   var getSequenceLength = function(sentence, level) {
+      var count = 0;
+      for (var iWord in sentence) {
+         count += data[level].options[sentence[iWord]].length;
+      }
+      return count;
+   };
+
+   var isTooShort = function(sentence, level) {
+      return getSequenceLength(sentence, level) &lt; data[level].sequence.length;
+   };
+
+   var isTooLong = function(sentence, level) {
+      return getSequenceLength(sentence, level) &gt; data[level].sequence.length;
+   };
+
+   var checkSentenceMatch = function(sentence, level) {
+      var sequence = &quot;&quot;;
+      for (var iWord in sentence) {
+         sequence += labelBank[sentence[iWord]].stars;
+      }
+      return sequence == data[level].sequence;
+   };
+
+   var equalSentences = function(sentence1, sentence2) {
+      return Beav.Object.eq(sentence1, sentence2);
+   };
+
+   var verifyCompletedSentences = function(input, level) {
+      for (var iSentence = 0; iSentence &lt; input.completed.length; iSentence++) {
+         if (!checkSentenceMatch(input.completed[iSentence], level)) {
+            return false;
+         }
+         for (var jSentence = iSentence + 1; jSentence &lt; input.completed.length; jSentence++) {
+            if (equalSentences(input.completed[iSentence], input.completed[jSentence])) {
+               return false;
+            }
+         }
+      }
+      return true;
+   };
+
+   var isCurrentDuplicate = function(input) {
+      for (var iSentence = 0; iSentence &lt; input.completed.length; iSentence++) {
+         if (equalSentences(input.completed[iSentence], input.current)) {
+            return true;
+         }
+      }
+      return false;
+   };
+
+
+   function checkResult(noVisual) {
+      if (!verifyCompletedSentences(answer, level)) {
+         return {
+            score: 0,
+            result: &quot;error&quot;,
+            message: &quot;ERREUR. Les séquences complétées sont invalides.&quot;};
+      }
+
+      var nbCompleted = answer.completed.length;
+      var nbToComplete = data[level].target;
+      var score = 0;
+      var maxScore = 1;
+      if (level == &quot;easy&quot;) {
+         if (nbCompleted &gt;= 1) {
+            score = maxScore;
+         }
+      } else {
+         if (nbCompleted == nbToComplete) {
+            score = maxScore;
+         } else if (nbCompleted == nbToComplete-1) {
+            score = maxScore * 6/10;
+         } else if (nbCompleted == nbToComplete-2) {
+            score = maxScore * 3/10;
+         }
+      }
+      var message = &quot;&quot;;
+      if (answer.completed.length === nbToComplete) {
+         message = taskStrings.success;
+      } else if (isCurrentDuplicate(answer)) {
+         /*if (level == &quot;easy&quot;) {
+            message = &quot;Cette séquence apparaît déjà à droite. Cherchez-en une autre.&quot;;
+         } */
+         message = taskStrings.already;
+         if (level == &quot;medium&quot; || level == &quot;hard&quot;) {
+            message += taskStrings.hint;
+         }
+      } else if (isTooLong(answer.current, level)) {
+         message = taskStrings.tooLong;
+      } else if (answer.current.length &gt; 0 &amp;&amp; isTooShort(answer.current, level)) {
+         message = taskStrings.tooShort;
+      } else if (answer.current.length &gt; 0 &amp;&amp; !checkSentenceMatch(answer.current, level)) {
+         message = taskStrings.notMatch;
+      } else if (answer.completed.length === 0) {
+         message = taskStrings.clickLeft;
+      } else {
+         message = taskStrings.foundSoFar(nbCompleted);
+         if (level == &quot;medium&quot; || level == &quot;hard&quot;) {
+            message += taskStrings.hint;
+         }
+      }
+      if(!noVisual &amp;&amp; score &lt; maxScore){
+         displayError(message);
+      }else 
+      if(!noVisual &amp;&amp; score == maxScore){
+         platform.validate(&quot;done&quot;);
+      }
+      return { successRate: score, message: message }
+
+   };
+
+   function displayError(msg) {
+      if(respEnabled){
+         displayHelper.displayError(msg);
+      }else{
+         $(&quot;#displayHelper_graderMessage&quot;).html(msg).css({color:&quot;red&quot;,&quot;font-weight&quot;:&quot;bold&quot;});
+      }
+   };
+
+}
+initWrapper(initTask, [&quot;easy&quot;, &quot;medium&quot;, &quot;hard&quot;],&quot;easy&quot;);
+displayHelper.useFullWidth();
+
+"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpcodejquerycomjquery171minjs"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="jqueryuitouchpunchminjs"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="raphael221b"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpsgithubcomdouglascrockfordJSONjs"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioibeav10js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioibeavertask20js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioisimulation20js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioiraphaelFactory10js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioidelayFactory10js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioisimulationFactory10js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioirandomGenerator10js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulesextjschanneljschanneljs"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioigrid11js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioigraph10js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioivisualgraph11js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioigraphmouse14js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioidrag_lib21js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulespemFioiraphaelButton10js"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="responsiveDOMConverter"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="fontsloader"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="loaderbuttonsAndMessages"></div>
+<div class="js-module-2015-CA-02-fireworks" data-content="httpwwwfranceioiorgmodulesintegrationAPI01officialplatformprjs"></div>
+<div id="question-2015-FR-03-mark-and-shuffle" class="question"><div id="task" class="taskView">
+<style>
+         #anim_container {
+            text-align: center;
+         }
+         #anim {
+            display: inline-block;
+         }
+      </style>
+         
+         
+         
+
+      <div id="zone_012"><div id="zone_0" style="width: 100%; max-height: 93px;"><h1 style="display: block;">Marquage d'oiseaux<span></span><span id="titleStars" class="stars"><svg height="22.799999999999997" version="1.1" width="96" xmlns="" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></image><rect x="-20" y="-29.5" width="40" height="140" rx="0" ry="0" fill="#ffc0cb" stroke="#000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="-19.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="5.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="30.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="55.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="80.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect></g><g transform="matrix(1,0,0,1,270,123.5)"><rect x="-40" y="-120.5" width="80" height="241" rx="0" ry="0" fill="#ffffff" stroke="#000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><image x="-35.5" y="-110.5" width="71" height="71" preserveAspectRatio="none" xlink:href="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-03-mark-and-shuffle/bird.png" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></image><rect x="-20" y="-29.5" width="40" height="140" rx="0" ry="0" fill="#ffc0cb" stroke="#000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="-19.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="5.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="30.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="55.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="80.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect></g><g transform="matrix(1,0,0,1,350,123.5)"><rect x="-40" y="-120.5" width="80" height="241" rx="0" ry="0" fill="#ffffff" stroke="#000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><image x="-35.5" y="-110.5" width="71" height="71" preserveAspectRatio="none" xlink:href="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-03-mark-and-shuffle/bird.png" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></image><rect x="-20" y="-29.5" width="40" height="140" rx="0" ry="0" fill="#ffc0cb" stroke="#000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="-19.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="5.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="30.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="55.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="80.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect></g><g transform="matrix(1,0,0,1,430,123.5)"><rect x="-40" y="-120.5" width="80" height="241" rx="0" ry="0" fill="#ffffff" stroke="#000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><image x="-35.5" y="-110.5" width="71" height="71" preserveAspectRatio="none" xlink:href="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-03-mark-and-shuffle/bird.png" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></image><rect x="-20" y="-29.5" width="40" height="140" rx="0" ry="0" fill="#ffc0cb" stroke="#000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="-19.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="5.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="30.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="55.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="80.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect></g><g transform="matrix(1,0,0,1,510,123.5)"><rect x="-40" y="-120.5" width="80" height="241" rx="0" ry="0" fill="#ffffff" stroke="#000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><image x="-35.5" y="-110.5" width="71" height="71" preserveAspectRatio="none" xlink:href="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-03-mark-and-shuffle/bird.png" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></image><rect x="-20" y="-29.5" width="40" height="140" rx="0" ry="0" fill="#ffc0cb" stroke="#000" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="-19.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="5.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="30.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="55.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect><rect x="-10" y="80.5" width="20" height="20" rx="0" ry="0" fill="#ffffff" stroke="#000" stroke-width="0.5" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></rect></g></svg></div>
+               </div></div></div></div><div id="scroll_arr_up" style="display: none;"><i class="fas fa-chevron-up"></i></div><div id="scroll_arr_down" style="display: block;"><i class="fas fa-chevron-down"></i></div><div id="scroll_arr_left" style="display: none;"><i class="fas fa-chevron-left"></i></div><div id="scroll_arr_right" style="display: none;"><i class="fas fa-chevron-right"></i></div></div><div id="zone_3" class="noSolution"><div id="resp_switch_1"><i class="far fa-file-alt"></i><span>ÉNONCÉ</span></div><div id="resp_switch_2"><i class="fas fa-pen"></i><span>EXERCICE</span></div><div id="displayHelperAnswering"><div id="displayHelper_graderMessage"></div><div id="displayHelper_cancel"><div onclick="displayHelper.restartAll();"><i class="fas fa-undo"></i><span>Recommencer</span></div></div><div id="displayHelper_validate"><div onclick="displayHelper.callValidate();"><i class="fas fa-check"></i><span>Valider</span></div></div><div id="displayHelper_saved">Vous n'avez pas encore de points sur cette version.</div></div><div id="showExercice" class="selected" style="display: none;"><i class="fas fa-pen"></i><span>EXERCICE</span></div><div id="showSolution" style="display: none;"><i class="fas fa-file-signature"></i><span>SOLUTION</span></div></div><span id="error" style="display: none;"><i class="fas fa-exclamation-triangle"></i><span id="errorMsg"></span> <i class="fas fa-times"></i></span><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-03-mark-and-shuffle/bird.png" style="display:none"><img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-03-mark-and-shuffle/icon.png" style="display:none"><div id="popupMessage"></div><center id="showSolutionButton"><button type="button" class="btn btn-default" onclick="miniPlatformShowSolution()">Voir la solution</button></center></div></div>
+<div id="javascript-2015-FR-03-mark-and-shuffle" data-content="
+         window.stringsLanguage = 'fr';
+      
+         var respEnabled = Beav.Navigator.supportsResponsive();
+         // var respEnabled = false;
+         if(respEnabled){
+            importModules(['buttonsAndMessages_resp','taskStyles-0.3_M']);
+            window.FontsLoader.loadFonts(['fontawesome']);
+            task.getMetaData = function(cb) { cb({nbHints: 0, autoHeight: true}); }
+         }else{
+            importModules(['buttonsAndMessages','taskStyles-0.1']);
+         }
+      
+      var taskStrings = {
+         introTitle: &quot;Votre mission&quot;,
+         success: &quot;Bravo, vous avez réussi !&quot;,
+         emptySlot: &quot;Il reste des oiseaux dans la zone du bas.&quot;,
+         incorrect: &quot;Vous n'avez pas remis tous les oiseaux à leur place d'origine.&lt;br/&gt; Si vous n'y arrivez pas, revenez à l'étape précédente.&quot;,
+         restart: &quot;Effacer les marques&quot;,
+         validate: &quot;Valider la réponse&quot;,
+         shuffle: &quot;Laisser les oiseaux s'envoler&quot;,
+         backToPrevious: &quot;Revenir à l'étape précédente&quot;,
+         moveBirds: &quot;Faites glissez les oiseaux à leur place d'origine.&quot;,
+         notDifferent: &quot;Les oiseaux doivent tous avoir des marques différentes.&quot;,
+         instruction: &quot;Remettez tous les oiseaux à leur place d'origine dans la zone du haut.&quot;
+         };
+      function initTask(subTask) {
+   'use strict';
+   var state = {};
+   var level;
+   var answer = null;
+   var data = {
+      easy: {
+         birds: 5,
+         marks: 5
+      },
+      medium: {
+         birds: 8,
+         marks: 4
+      },
+      hard: {
+         birds: 8,
+         marks: 3
+      }
+   };
+   var birdLetters = &quot;ABCDEFGH&quot;;
+   var phases = {
+      mark: 1,
+      drag: 2,
+      finish: 3
+   };
+
+   var maxSlotHeight = 244;
+   var bottomContainerY = maxSlotHeight + 84; 
+   var topContainerCenterY = 122; // changes according to the level 
+   var bottomContainerCenterY = 430; // changes according to the level
+
+   var paper;
+   var paperWidth = 700;
+   var paperHeight = 570;
+   var topContainer;
+   var bottomContainer;
+   var dragAndDrop;
+   var birds;
+   var marks;
+   var simulation;
+   var shuffleButton;
+   var restartButton;
+   var validateButton;
+   var backButton;
+   var instructionLabel;
+   var errorLabel;
+
+   var containerDefaultAnimTime = 10;
+   var containerShuffleAnimTime = 10;
+
+   var noVisual = false;
+
+   var birdParams = {
+      birdImage: {
+         name: &quot;https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-FR-03-mark-and-shuffle/bird.png&quot;,
+         width: 71,
+         height: 71
+      },
+      legWidth: 40,
+      legHeight: 150, // changes according to the level
+      legOffsetY: 75, // changes according to the level
+      offsetY: 5  // changes according to the level
+   };
+   var slotAttr = {
+      width: 80, 
+      height: 240 // changes according to the level
+   };
+   var markParams = {
+      offsetX: 0,
+      verticalSpaceFirstAndLast: 10,
+      width: 20,
+      height: 20,
+      verticalSpace: 5,
+      rectAttr: {
+         &quot;stroke-width&quot;: 0.5
+      },
+      markedAttr: {
+         fill: &quot;gray&quot;
+      },
+      unmarkedAttr: {
+         fill: &quot;white&quot;
+      }
+   };
+   var buttonParams = {
+      restart: {
+         xPos: 370,
+         yPos: 280,
+         width: 250,
+         height: 32,
+         text: taskStrings.restart
+      },
+      validate: {
+         xPos: 100,
+         yPos: 280,
+         width: 250,
+         height: 32,
+         text: taskStrings.validate
+      },
+      shuffle: {
+         xPos: 100,
+         yPos: 280,
+         width: 250,
+         height: 32,
+         text: taskStrings.shuffle
+      },
+      back: {
+         xPos: 370,
+         yPos: 280,
+         width: 250,
+         height: 32,
+         text: taskStrings.backToPrevious
+      }
+   };
+   var instructionLabelAttr = {
+      xPos: paperWidth/2,
+      yPos: 262,
+      text: taskStrings.moveBirds,
+      &quot;font-size&quot;: 16,
+      &quot;font-weight&quot;: &quot;bold&quot;
+   };
+   var errorLabelAttr = {
+      xPos: paperWidth/2,
+      yPos: 262,
+      text: taskStrings.notDifferent,
+      &quot;font-size&quot;: 16,
+      &quot;font-weight&quot;: &quot;bold&quot;,
+      &quot;fill&quot;: &quot;red&quot;
+   };
+   var letterAttr = {
+      y: 20,
+      &quot;font-size&quot;: 32
+   };
+
+   // TODO fill permutations
+   var permutations = {
+      easy: [
+         [3, 2, 4, 0, 1],
+         [4, 1, 2, 3, 0]
+      ],
+      medium: [
+         [6, 1, 3, 5, 0, 2, 7, 4]
+      ],
+      hard: [
+         [6, 1, 3, 5, 0, 2, 7, 4]
+      ]
+   };
+   var currentSeedOffsets = {
+      easy: 0,
+      medium: 0,
+      hard: 0
+   };
+   // var taskSeed;
+
+   subTask.loadLevel = function(curLevel) {
+      if(respEnabled){
+         displayHelper.responsive = true;
+         // displayHelper.hideSolutionButton = true;
+         convertDOM();
+      }else{
+         displayHelper.responsive = false;
+      }
+      level = curLevel;
+      displayHelper.customValidate = checkResult;
+
+      displayHelper.taskH = paperHeight + 30;
+      displayHelper.taskW = 770;
+      displayHelper.minTaskW = 500;
+      displayHelper.maxTaskW = 900;
+   };
+
+   subTask.getStateObject = function() {
+      return state;
+   };
+
+    subTask.getAnswerObject = function() {
+      updateAnswer();
+      return answer;
+   };
+
+   subTask.reloadAnswerObject = function(answerObj) {
+      answer = answerObj;
+   };
+
+   subTask.unloadLevel = function(callback) {
+      callback();
+   };
+
+   subTask.getGrade = function(callback) {
+      callback(getResultAndMessage());
+   };
+
+   var getResultAndMessage = function() {
+      noVisual = true;
+      var result = checkResult(true);
+      return result
+   };
+
+   subTask.getDefaultAnswerObject = function() {
+      currentSeedOffsets[level]++;
+      var defaultAnswer = {};
+      var counter = 0;
+      // counter++;
+      defaultAnswer = {};
+      defaultAnswer.permutationIndex = (1237 * counter + subTask.taskParams.randomSeed + currentSeedOffsets[level]) % permutations[level].length;
+      defaultAnswer.phase = phases.mark;
+      defaultAnswer.bottom = Beav.Array.make(data[level].birds, null);
+      defaultAnswer.marks = [];
+      defaultAnswer.top = [];
+      for (var iBird = 0; iBird &lt; data[level].birds; iBird++) {
+         defaultAnswer.marks.push(Beav.Array.make(data[level].marks, false));
+         defaultAnswer.top.push(iBird);
+      }
+      return defaultAnswer;
+   };
+
+   subTask.resetDisplay = function() {
+      displayError(&quot;&quot;);
+      initPaper();
+      loadPhase();
+      initBirds();
+   };
+
+   function restart() {
+      errorLabel.hide();
+      displayHelper.stopShowingResult();
+      for (var iBird = 0; iBird &lt; data[level].birds; iBird++) {
+         for (var iMark = 0; iMark &lt; data[level].marks; iMark++) {
+            answer.marks[iBird][iMark] = false;
+            marks[iBird][iMark].attr(markParams.unmarkedAttr);
+         }
+      }
+      // loadPhase();
+      // initBirds();
+   };
+
+   subTask.unloadLevel = function(callback) {
+      // stopExecution();
+      callback();
+   };
+
+   var initPaper = function() {
+      var nbMarks = data[level].marks;
+      birdParams.legHeight = 2 * markParams.verticalSpaceFirstAndLast + nbMarks * markParams.height + (nbMarks-1) * markParams.verticalSpace;
+      var margin = 10;
+      slotAttr.height = birdParams.legHeight + birdParams.birdImage.height + 3 * margin;
+      birdParams.legOffsetY = slotAttr.height - birdParams.legHeight - margin;
+      birdParams.offsetY = birdParams.legOffsetY - birdParams.birdImage.height - margin;
+      topContainerCenterY = maxSlotHeight - slotAttr.height/2;
+      bottomContainerCenterY = bottomContainerY + slotAttr.height/2;
+
+      if(paper){
+         paper.remove();
+         subTask.raphaelFactory.remove(&quot;anim&quot;);
+      }
+      paper = subTask.raphaelFactory.create(&quot;anim&quot;, &quot;anim&quot;, paperWidth, paperHeight);
+      initDragAndDrop();
+      initButtonsAndLabels();
+   };
+
+   var initLetters = function() {
+      for (var iBird = 0; iBird &lt; data[level].birds; iBird++) {
+         paper.text().attr({
+            text: birdLetters.charAt(iBird),
+            x: paperWidth / 2 - slotAttr.width * data[level].birds / 2 + iBird * slotAttr.width + slotAttr.width / 2
+         }).attr(letterAttr);
+      }
+   };
+
+   var initDragAndDrop = function() {
+      dragAndDrop = new DragAndDropSystem({
+         paper: paper,
+         canBeTaken: isDragPhase,
+         actionIfDropped: function(srcCont, srcPos, dstCont, dstPos, dropType) {
+            displayError(&quot;&quot;);
+            if (srcCont == dstCont &amp;&amp; srcPos == dstPos) {
+               return true;
+            }
+            return !!dstCont &amp;&amp; dragAndDrop.getObjects(dstCont)[dstPos] === null;
+         },
+         actionIfEjected: function(refEl, previousContId, previousPos) {
+            return action(previousContId, getRightmostAvailable(previousContId), 'replace');
+         }
+      });
+
+      var topBackground = paper.rect(-slotAttr.width / 2, -slotAttr.height / 2).attr(slotAttr);
+      topContainer = dragAndDrop.addContainer({
+         ident: &quot;top&quot;,
+         cx: paperWidth / 2,
+         cy: topContainerCenterY,
+         widthPlace: slotAttr.width,
+         heightPlace: slotAttr.height,
+         nbPlaces: data[level].birds,
+         dropMode: &quot;replace&quot;,
+         dragDisplayMode: &quot;preview&quot;,
+         direction: &quot;horizontal&quot;,
+         //align: &quot;left&quot;,
+         placeBackgroundArray: [topBackground]
+      });
+      topContainer.timeAnim = containerDefaultAnimTime;
+   };
+
+   var getRightmostAvailable = function(container) {
+      var slots = dragAndDrop.getObjects(container);
+      for (var iSlot = slots.length - 1; iSlot &gt;= 0; iSlot--) {
+         if (slots[iSlot] === null) {
+            return iSlot;
+         }
+      }
+      return -1;
+   };
+
+   var initBirds = function() {
+      birds = Beav.Array.make(data[level].birds, null);
+      marks = Beav.Array.make(data[level].birds, null);
+      var containers = [&quot;top&quot;];
+      if (isDragPhase()) {
+         containers.push(&quot;bottom&quot;);
+      }
+      for (var iContainer in containers) {
+         var container = containers[iContainer];
+         dragAndDrop.removeAllObjects(container);
+         for (var iSlot = 0; iSlot &lt; data[level].birds; iSlot++) {
+            var iBird = answer[container][iSlot];
+            if (iBird === null) {
+               continue;
+            }
+            drawBird(iBird);
+            dragAndDrop.insertObject(container, iSlot, {
+               ident: iBird,
+               elements: birds[iBird]
+            });
+         }
+      }
+   };
+
+   var drawBird = function(iBird) {
+      birds[iBird] = paper.set();
+      marks[iBird] = paper.set();
+      var bgRect = paper.rect(-slotAttr.width/2, -slotAttr.height/2, slotAttr.width, slotAttr.height).attr({&quot;fill&quot;: &quot;white&quot;}).toBack();
+      var birdImage = paper.image(birdParams.birdImage.name, -birdParams.birdImage.width / 2, -slotAttr.height / 2 + birdParams.offsetY, birdParams.birdImage.width, birdParams.birdImage.height);
+      var leg = paper.rect(-birdParams.legWidth / 2, -slotAttr.height / 2 + birdParams.legOffsetY, birdParams.legWidth, birdParams.legHeight).attr({&quot;fill&quot;:&quot;pink&quot;});
+      for (var iMark = 0; iMark &lt; data[level].marks; iMark++) {
+         var xPos = -markParams.width / 2 + markParams.offsetX;
+         var yPos = -slotAttr.height / 2 + birdParams.legOffsetY + markParams.verticalSpaceFirstAndLast + iMark * (markParams.height + markParams.verticalSpace);
+         var mark = paper.rect(xPos, yPos, markParams.width, markParams.height).attr(markParams.rectAttr);
+         if (answer.marks[iBird][iMark]) {
+            mark.attr(markParams.markedAttr);
+         } else {
+            mark.attr(markParams.unmarkedAttr);
+         }
+         mark.mousedown(clickMark(iBird, iMark));
+         marks[iBird].push(mark);
+      }
+      birds[iBird].push(bgRect, birdImage, leg, marks[iBird]);
+   };
+
+   var clickMark = function(iBird, iMark) {
+      var handler = function() {
+         displayError(&quot;&quot;);
+         displayHelper.stopShowingResult();
+         errorLabel.hide();
+         if (answer.phase !== phases.mark) {
+            return;
+         }
+         answer.marks[iBird][iMark] = !(answer.marks[iBird][iMark]);
+         if (answer.marks[iBird][iMark]) {
+            this.attr(markParams.markedAttr);
+         } else {
+            this.attr(markParams.unmarkedAttr);
+         }
+      };
+      return handler;
+   };
+
+   var initButtonsAndLabels = function() {
+      // LATER: factoriser ce code avec des fonctions dans la lib Button =&gt; mybutton.draw(paper, ...)
+
+      shuffleButton = new Button(paper, buttonParams.shuffle.xPos, buttonParams.shuffle.yPos, buttonParams.shuffle.width, buttonParams.shuffle.height, buttonParams.shuffle.text);
+      shuffleButton.click(simulateShuffle);
+
+      validateButton = new Button(paper, buttonParams.validate.xPos, buttonParams.validate.yPos, buttonParams.validate.width, buttonParams.validate.height, buttonParams.validate.text);
+      validateButton.click(validate);
+      validateButton.hide();
+
+      restartButton = new Button(paper, buttonParams.restart.xPos, buttonParams.restart.yPos, buttonParams.restart.width, buttonParams.restart.height, buttonParams.restart.text);
+      restartButton.click(restart);
+      restartButton.hide();
+
+      backButton = new Button(paper, buttonParams.back.xPos, buttonParams.back.yPos, buttonParams.back.width, buttonParams.back.height, buttonParams.back.text);
+      backButton.click(clickBack);
+      backButton.hide();
+
+      instructionLabel = paper.text(instructionLabelAttr.xPos, instructionLabelAttr.yPos, instructionLabelAttr.text).attr(instructionLabelAttr);
+      instructionLabel.hide();
+
+      errorLabel = paper.text(errorLabelAttr.xPos, errorLabelAttr.yPos, errorLabelAttr.text).attr(errorLabelAttr);
+      errorLabel.hide();
+};
+
+   var clickBack = function() {
+      displayError(&quot;&quot;);
+      displayHelper.stopShowingResult();
+      answer.bottom = Beav.Array.make(data[level].birds, null);
+      answer.top = Beav.Array.init(data[level].birds, function(index) {
+         return index;
+      });
+      answer.phase = phases.mark;
+      subTask.resetDisplay();
+   };
+
+   var loadPhase = function() {
+      stopDragMode();
+      shuffleButton.hide();
+      validateButton.hide();
+      restartButton.hide();
+      backButton.hide();
+      instructionLabel.hide();
+      errorLabel.hide();
+
+      if (isDragPhase()) {
+         validateButton.show();
+         backButton.show();
+         instructionLabel.show();
+         startDragMode();
+      } else if (answer.phase === phases.mark) {
+         restartButton.show();
+         shuffleButton.show();
+      }
+   };
+
+   var startDragMode = function() {
+      stopDragMode();
+      var bottomBackground = paper.rect(-slotAttr.width / 2, -slotAttr.height / 2).attr(slotAttr);
+      bottomContainer = dragAndDrop.addContainer({
+         ident: &quot;bottom&quot;,
+         cx: paperWidth / 2,
+         cy: bottomContainerCenterY,
+         widthPlace: slotAttr.width,
+         heightPlace: slotAttr.height,
+         nbPlaces: data[level].birds,
+         dropMode: &quot;replace&quot;,
+         dragDisplayMode: &quot;preview&quot;,
+         direction: &quot;horizontal&quot;,
+         //align: &quot;left&quot;,
+         placeBackgroundArray: [bottomBackground]
+      });
+      bottomContainer.timeAnim = containerDefaultAnimTime;
+   };
+
+   var stopDragMode = function() {
+      dragAndDrop.removeAllObjects(&quot;bottom&quot;);
+      dragAndDrop.removeContainer(&quot;bottom&quot;);
+   };
+
+   var isDragPhase = function() {
+      return answer.phase == phases.drag;
+   };
+
+   var simulateShuffle = function() {
+      displayHelper.stopShowingResult();
+      var iBird;
+      // FOR DEBUG: comment out this code
+      if (true) {
+         for (iBird = 0; iBird &lt; data[level].birds; iBird++) {
+            for (var jBird = iBird + 1; jBird &lt; data[level].birds; jBird++) {
+               if (Beav.Object.eq(answer.marks[iBird], answer.marks[jBird])) {
+                  errorLabel.show();
+                  return;
+               }
+            }
+         }
+      }
+
+      answer.phase = phases.drag;
+      loadPhase();
+      simulation = new Simulation();
+      var step = new SimulationStep();
+
+      for (iBird = 0; iBird &lt; data[level].birds; iBird++) {
+         for (var iMark = 0; iMark &lt; data[level].marks; iMark++) {
+            // marks[iBird][iMark].hide();
+         }
+      }
+
+      shuffleButton.hide();
+      validateButton.hide();
+      topContainer.timeAnim = containerShuffleAnimTime;
+      bottomContainer.timeAnim = containerShuffleAnimTime;
+
+      step.addEntry({
+         name: &quot;shuffle&quot;,
+         action: {
+            onExec: function() {
+               // console.log(&quot;shuffle&quot;)
+               for (var iSlot = 0; iSlot &lt; data[level].birds; iSlot++) {
+                  dragAndDrop.handleDrop(topContainer, iSlot, bottomContainer, permutations[level][answer.permutationIndex][iSlot], &quot;replace&quot;);
+               }
+            },
+            duration: containerShuffleAnimTime,
+            // useTimeout: true
+         }
+      });
+
+      step.addEntryAllParents({
+         name: &quot;show&quot;,
+         action: {
+            onExec: function(params, duration, callback) {
+               console.log(&quot;show&quot;)
+               for (var iBird = 0; iBird &lt; data[level].birds; iBird++) {
+                  for (var iMark = 0; iMark &lt; data[level].marks; iMark++) {
+                     marks[iBird][iMark].show();
+                  }
+               }
+               validateButton.show();
+
+               topContainer.timeAnim = containerDefaultAnimTime;
+               bottomContainer.timeAnim = containerDefaultAnimTime;
+               callback();
+            }
+         }
+      });
+      simulation.addStep(step);
+      simulation.setAutoPlay(true);
+      simulation.play();
+   };
+
+   var stopExecution = function() {
+      if (simulation) {
+         // simulation.destroy();
+      }
+   };
+
+   var updateAnswer = function() {
+      answer.top = dragAndDrop.getObjects(&quot;top&quot;);
+      if (isDragPhase()) {
+         answer.bottom = dragAndDrop.getObjects(&quot;bottom&quot;);
+      }
+   };
+
+   var validate = function() {
+      displayHelper.stopShowingResult();
+      updateAnswer();
+      var result = getResult(answer, level);
+      if (result.success) {
+         answer.phase = phases.finish;
+         loadPhase();
+         platform.validate(&quot;done&quot;);
+      } else {
+         // displayHelper.validate(&quot;stay&quot;);
+      }
+   };
+
+   function checkResult(final) {
+      if (answer.phase != phases.drag &amp;&amp; answer.phase != phases.finish) {
+         // should never be seen by the user
+         displayError(&quot;You need to first let the bird fly away.&quot;);
+         return {success: false, message: &quot;You need to first let the bird fly away.&quot; };
+      }
+      var iBird;
+      for (iBird = 0; iBird &lt; data[level].birds; iBird++) {
+         if (answer.top[iBird] === null) {
+            var error = taskStrings.emptySlot
+            displayError(error);
+            return {successRate: 0, message: error };
+         }
+      }
+      for (iBird = 0; iBird &lt; data[level].birds; iBird++) {
+         if (answer.top[iBird] !== iBird) {
+            var error = taskStrings.incorrect
+            displayError(error);
+            return {successRate: 0, message: error };
+         } 
+      }
+      if(!final){
+         platform.validate(&quot;done&quot;);
+      }
+      return {successRate: 1, message: taskStrings.success };
+   };
+
+   function displayError(msg) {
+      if(noVisual){
+         return
+      }
+      if(respEnabled){
+         displayHelper.displayError(msg);
+      }else{
+         $(&quot;#error&quot;).html(msg);
+      }
+      // $(&quot;#displayHelper_graderMessage&quot;).html(msg);
+   };
+}
+initWrapper(initTask, [&quot;easy&quot;, &quot;medium&quot;, &quot;hard&quot;]);
+displayHelper.useFullWidth();
+
+
+
+"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpcodejquerycomjquery171minjs"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="jqueryuitouchpunchminjs"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpcdnjscloudflarecomajaxlibsraphael221raphaelminjs"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpsgithubcomdouglascrockfordJSONjs"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpwwwfranceioiorgmodulespemFioigrid11js"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpwwwfranceioiorgmodulespemFioibeav10js"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpwwwfranceioiorgmodulespemFioibeavertask20js"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpwwwfranceioiorgmodulespemFioisimulation20js"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpwwwfranceioiorgmodulespemFioiraphaelFactory10js"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpwwwfranceioiorgmodulespemFioidelayFactory10js"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpwwwfranceioiorgmodulespemFioisimulationFactory10js"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="button10"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpwwwfranceioiorgmodulespemFioiraphaelButton10js"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpwwwfranceioiorgmodulespemFioidrag_lib21js"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpwwwfranceioiorgmodulespemFioirandomGenerator10js"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="shapepaths11"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="responsiveDOMConverter"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="fontsloader"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="loaderbuttonsAndMessages"></div>
+<div class="js-module-2015-FR-03-mark-and-shuffle" data-content="httpwwwfranceioiorgmodulesintegrationAPI01officialplatformprjs"></div>
+<div id="question-2015-SI-05-horse-races" class="question"><div id="task" class="taskView">
+<style>
+      
+#miniPlatformHeader {
+  height: 40px;
+  background-color: #fff;
+  overflow: hidden;
+}
+#miniPlatformHeader img {
+  max-height: 35px;
+  width: auto;
+}
+#miniPlatformHeader h1 {
+  display: inline-block;
+  line-height: 40px;
+  font-size: 16px;
+  margin: 0;
+  vertical-align: top;
+}
+#miniPlatformHeader .platform {
+  font-size: 32px;
+}
+@media screen and (max-width: 800px) {
+
+  #miniPlatformHeader  {
+    font-size: 10px;
+  }
+
+  #miniPlatformHeader h1 {
+    font-size: 12px;
+  }
+
+}
+@media screen and (max-width: 600px) {
+
+  #miniPlatformHeader .platform {
+    font-size: 16px;
+  }
+}</style>
+         <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/horse.png" style="display:none">
+         <h1 style="display: block;">Course de chevaux</h1>
+         <div id="tabsContainer"></div>
+         <div id="taskContent">
+            <p>
+               <span class="easy">Trouvez le cheval qui court </span>
+               <span class="medium">Trouvez les <b>2</b> chevaux qui courent </span>
+               <span class="hard">Trouvez les <b>3</b> chevaux qui courent </span>
+               le plus vite, en organisant le moins de courses possibles.
+            </p>
+            <p>Trois chevaux participent à chaque course. Un même cheval court toujours à la même vitesse.</p>
+
+            <p>Pour organiser d'autres courses, cliquez sur les chevaux désirés, puis lancez la course. </p> 
+
+            <p>Notez que trois courses ont déjà été effectuées.</p>
+ 
+            <div id="anim"></div>
+            <img src="https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/icon.png" style="display:none">
+            
+         </div>
+      </div></div>
+<div id="javascript-2015-SI-05-horse-races" data-content="
+      var taskStrings = {
+         podium: &quot;Podium&quot;,
+         pastRaces: &quot;Résultats des\n courses passées :&quot;,
+         arrival: [&quot;1er&quot;, &quot;2ème&quot;, &quot;3ème&quot;],
+         launch: &quot;Lancer la course&quot;,
+         maxRacesReached: &quot;Vous avez effectué # courses, ce qui est le maximum autorisé.\nVous pouvez placer des chevaux sur le podium, ou tout recommencer.&quot;,
+         success: &quot;Bravo, vous avez réussi !&quot;,
+         successPartial: function(steps, stepsOptimal) { return &quot;Vous avez réussi en &quot; + steps + &quot; courses.&lt;br&gt; Recommencez pour essayer de trouver le podium en seulement &quot; + stepsOptimal + &quot; courses.&quot;; },
+         incorrect: &quot;Votre podium n'est pas le bon.&quot;,
+         incorrectCannotBeSure: &quot;Vous n'avez pas organisé un ensemble de courses vous permettant d'être certain que votre podium est correct.&quot;,
+         incomplete: &quot;Vous n'avez pas placé de chevaux sur le podium.&quot;,
+
+         prepareRaceText: function(raceSize) {
+            return &quot;Sélectionnez &quot; + raceSize + &quot; chevaux pour\norganiser une course.&quot;;
+         }
+      };
+
+      function initTask() {
+   'use strict';
+   var level;
+   var answer = null;
+   var state = null;
+   var data = {
+      easy: {
+         horses: 9,
+         race: 3,
+         optimal: 4,
+         target: 1
+      },
+      medium: {
+         horses: 9,
+         race: 3,
+         optimal: 5,
+         target: 2
+      },
+      hard: {
+         horses: 9,
+         race: 3,
+         optimal: 6,
+         target: 3
+      }
+   };
+   var horseColors = {
+      0: &quot;black&quot;,
+      1: &quot;#505050&quot;,
+      2: &quot;brown&quot;,
+      3: &quot;darkblue&quot;,
+      4: &quot;darkgreen&quot;,
+      5: &quot;#800000&quot;,
+      6: &quot;#556B2F&quot;,
+      7: &quot;#4B0082&quot;,
+      8: &quot;purple&quot;
+   };
+   var horseLetters = {
+      0: &quot;A&quot;,
+      1: &quot;B&quot;,
+      2: &quot;C&quot;,
+      3: &quot;D&quot;,
+      4: &quot;E&quot;,
+      5: &quot;F&quot;,
+      6: &quot;G&quot;,
+      7: &quot;H&quot;,
+      8: &quot;I&quot;
+   };
+
+   var paper;
+   var paperParams = {
+      width: 770,
+      height: 560,
+      canvasAttr: {
+         width: 530,
+         height: 450,
+         x: 230,
+         y: 2
+      },
+      validateAttr: {
+         width: 200,
+         height: 30,
+         x: 545,
+         y: 185
+      }
+   };
+   var horseLetterSize = 26;
+   var historyParams = {
+      width: 180, // LATER: unused?
+      x: 25,
+      titleOffsetY: 0,
+      horseSize: 35,
+      verticalSpace: 15,
+      horizontalSpace: 30,
+      bottomY: 400,
+      titleAttr: {
+         &quot;font-size&quot;: 20,
+         &quot;fill&quot;: &quot;black&quot;,
+         &quot;text&quot;: taskStrings.pastRaces,
+         x: 96
+      },
+      horseLetterAttr: {
+         fill: &quot;#888888&quot;,
+         &quot;font-size&quot;: horseLetterSize
+      },
+      horseBorderAttr: {
+         fill: &quot;none&quot;,
+         &quot;stroke&quot;: &quot;#888888&quot;,
+         &quot;stroke-width&quot;: 3
+      },
+      slotAttr: {
+         &quot;font-size&quot;: 20,
+         y: 460
+      },
+      separatorAttr: {
+         width: 0.5,
+         fill: &quot;black&quot;,
+         height: 0
+      }
+   };
+   var podiumParams = {
+      slotWidth: 70,
+      heights: {
+         1: 100,
+         2: 75,
+         3: 50
+      },
+      bottomRightX: 750,
+      bottomRightY: 180,
+      pathAttr: {
+         &quot;fill&quot;: &quot;#8cc3eb&quot;,
+         &quot;stroke&quot;: &quot;black&quot;
+      },
+      slotPositions: {
+         1: {
+            x: 620,
+            y: 20
+         },
+         2: {
+            x: 550,
+            y: 45
+         },
+         3: {
+            x: 690,
+            y: 70
+         }
+      },
+      slotAttr: {
+         width: 54,
+         height: 54
+      },
+      textAttr: {
+         &quot;font-size&quot;: 24,
+         &quot;font-weight&quot;: 600
+      },
+      textOffsetY: 80,
+      snap: 40
+   };
+   var racePanel = {
+      startButton: null,
+      prepareText: null,
+      slotSquares: [],
+      horses: null
+   };
+   var racePanelParams = {
+      startButton: {
+         x: 210,
+         y: 490,
+         width: 150,
+         height: 30,
+         text: taskStrings.launch
+      },
+      prepareText: {
+         x: 470,
+         y: 505,
+         &quot;font-size&quot;: 16
+      },
+      maxRaceText: {
+         x: 455,
+         y: 505,
+         text: taskStrings.maxRacesReached,
+         &quot;font-size&quot;: 16
+      },
+      slot: {
+         x: 585,
+         y: 480,
+         width: 54,
+         height: 54
+      },
+      slotPadding: 10
+   };
+   var horseParams = {
+      width: 54,
+      height: 54,
+      image: &quot;https://bebras-render-demo.onrender.com/contestInterface/contests/2015_castor_ajakjtxnasj.1778420233/2015-SI-05-horse-races/horse.png&quot;,
+      textOffset: {
+         x: 40,
+         y: 40
+      },
+      elements: [
+         &quot;background&quot;,
+         &quot;image&quot;,
+         &quot;letter&quot;,
+         &quot;selection&quot;,
+         &quot;tag&quot;
+      ],
+      selection: {
+         width: 54,
+         height: 54,
+         &quot;stroke&quot;: &quot;#aa0000&quot;,
+         &quot;stroke-width&quot;: 5
+      },
+      letterAttr: {
+         &quot;fill&quot;: &quot;white&quot;,
+         &quot;font-size&quot;: horseLetterSize,
+         &quot;stroke&quot;: &quot;black&quot;,
+         &quot;stroke-width&quot;: 1,
+         &quot;font-weight&quot;: 700
+      },
+      tagAttr: {
+         &quot;font-size&quot;: 16, 
+         &quot;font-weight&quot;: 600,
+         fill: &quot;black&quot;
+      },
+      tagOffset: {
+         x: 8,
+         y: 8
+      },
+      placeHolderLetterAttr: {
+         fill: &quot;#aaaaaa&quot;,
+         &quot;font-size&quot;: horseLetterSize
+      },
+      placeHolderBorderAttr: {
+         fill: &quot;none&quot;,
+         &quot;stroke&quot;: &quot;#aaaaaa&quot;,
+         &quot;stroke-width&quot;: 3
+      },
+      repelDistance: 10,
+      repelLimit: 10,
+      repelRandomOffset: 5,
+      dragThreshold: 5
+   };
+   var horseMax = {
+      x: paperParams.canvasAttr.x + paperParams.canvasAttr.width - horseParams.width,
+      y: paperParams.canvasAttr.y + paperParams.canvasAttr.height - horseParams.height
+   };
+   var horseMinPos = {
+      x: paperParams.canvasAttr.x,
+      y: paperParams.canvasAttr.y
+   };
+   var startLineParams = {
+      padding: 10,
+      x: 720,
+      y: 480
+   };
+   var finishLineX = 15;
+   var horses;
+   var permutation;
+   var maxRaces = 9; // 12
+
+   var taskSeed;
+   var numSeeds = 50;
+   var currentSeedOffsets = {
+      easy: 0,
+      medium: 0,
+      hard: 0
+   };
+   var randomGenerator;
+
+   var podium;
+   var podiumSlots;
+
+   var historyPanel = {
+      title: null,
+      races: null
+   };
+
+   var validateButton;
+
+   var simulation;
+   var sortedHorses;
+   var animPreparing = 600;
+   var animRacing = [200, 400, 600, 800, 1000];
+
+   task.load = function(views, callback) {
+      platform.getTaskParams('randomSeed', null, function(randomSeed) {
+         taskSeed = randomSeed;
+         randomGenerator = new RandomGenerator(taskSeed);
+
+         // displayHelper.hideValidateButton = true;
+         displayHelper.setupLevels();
+
+         if (views.solutions) {
+            $(&quot;#solution&quot;).show();
+         }
+
+         callback();
+      });
+   };
+
+   task.getDefaultStateObject = function() {
+      return {
+         level: &quot;easy&quot;
+      };
+   };
+
+   task.getStateObject = function() {
+      state.level = level;
+      return state;
+   };
+
+   task.reloadStateObject = function(stateObj, display) {
+      state = stateObj;
+      level = state.level;
+
+      if (display) {
+         initPaper();
+      }
+   };
+
+   task.reloadAnswerObject = function(answerObj) {
+      stopExecution();
+      answer = answerObj;
+      loadPermutation();
+      loadHorsesPositions();
+      loadHistory();
+      loadRacePanel();
+      bindHorsesMouseEvents();
+   };
+
+   task.getAnswerObject = function() {
+      saveHorsesPositions();
+      return answer;
+   };
+
+   task.getDefaultAnswerObject = function() {
+
+      currentSeedOffsets[level]++;
+      currentSeedOffsets[level] %= numSeeds;
+
+      return {
+         easy: {
+            seed: 1000 + taskSeed + currentSeedOffsets.easy,
+            positions: {
+               0: {
+                  x: 250,
+                  y: 250
+               },
+               1: {
+                  x: 350,
+                  y: 250
+               },
+               2: {
+                  x: 450,
+                  y: 250
+               },
+               3: {
+                  x: 550,
+                  y: 250
+               },
+               4: {
+                  x: 650,
+                  y: 250
+               },
+               5: {
+                  x: 300,
+                  y: 350
+               },
+               6: {
+                  x: 400,
+                  y: 350
+               },
+               7: {
+                  x: 500,
+                  y: 350
+               },
+               8: {
+                  x: 600,
+                  y: 350
+               }
+            },
+            podium: {},
+            races: [[0,1,2],[3,4,5],[6,7,8]]
+         },
+         medium: {
+            seed: 2000 + taskSeed + currentSeedOffsets.medium,
+            positions: {
+               0: {
+                  x: 250,
+                  y: 250
+               },
+               1: {
+                  x: 350,
+                  y: 250
+               },
+               2: {
+                  x: 450,
+                  y: 250
+               },
+               3: {
+                  x: 550,
+                  y: 250
+               },
+               4: {
+                  x: 650,
+                  y: 250
+               },
+               5: {
+                  x: 300,
+                  y: 350
+               },
+               6: {
+                  x: 400,
+                  y: 350
+               },
+               7: {
+                  x: 500,
+                  y: 350
+               },
+               8: {
+                  x: 600,
+                  y: 350
+               }
+            },
+            podium: {},
+            races: [[0,1,2],[3,4,5],[6,7,8]]
+         },
+         hard: {
+            seed: 3000 + taskSeed + currentSeedOffsets.hard,
+            positions: {
+               0: {
+                  x: 250,
+                  y: 250
+               },
+               1: {
+                  x: 350,
+                  y: 250
+               },
+               2: {
+                  x: 450,
+                  y: 250
+               },
+               3: {
+                  x: 550,
+                  y: 250
+               },
+               4: {
+                  x: 650,
+                  y: 250
+               },
+               5: {
+                  x: 300,
+                  y: 350
+               },
+               6: {
+                  x: 400,
+                  y: 350
+               },
+               7: {
+                  x: 500,
+                  y: 350
+               },
+               8: {
+                  x: 600,
+                  y: 350
+               }
+            },
+            podium: {},
+            races: [[0,1,2],[3,4,5],[6,7,8]]
+         }
+      };
+   };
+
+   task.unload = function(callback) {
+      stopExecution();
+      callback();
+   };
+
+   var initPaper = function() {
+      if (paper) {
+         if (validateButton) {
+            validateButton.remove();
+         }
+         if(racePanel.startButton) {
+            racePanel.startButton.remove();
+         }
+         paper.remove();
+      }
+      paper = new Raphael(&quot;anim&quot;, paperParams.width, paperParams.height);
+      initCanvas();
+      initHorses();
+      initRacePanel();
+      initHistory();
+      initPodium();
+      //initValidate();
+      initDrag();      
+   };
+
+   var initCanvas = function() {
+      paper.rect().attr(paperParams.canvasAttr);
+   };
+
+   var initHorses = function() {
+      horses = [];
+      for (var iHorse = 0; iHorse &lt; data[level].horses; iHorse++) {
+         horses.push(drawHorse(iHorse, 0, 0));
+      }
+   };
+
+   var initHistory = function() {
+      historyPanel.title = paper.text().attr(historyParams.titleAttr);
+      historyPanel.title.attr(&quot;text&quot;, &quot;&quot;);
+
+      var iSlot;
+      for(iSlot = 0; iSlot &lt; data[level].race; iSlot++) {
+         var text = paper.text().attr(historyParams.slotAttr);
+         text.attr({text: taskStrings.arrival[iSlot] });
+         text.attr({x: historyParams.x + iSlot * (historyParams.horseSize + historyParams.horizontalSpace) + historyParams.horseSize / 2});
+         text.hide();
+         historyPanel[&quot;slot&quot; + iSlot] = text;
+      }
+
+      /*
+      historyPanel.separators = {};
+      for(iSlot = 0; iSlot &lt; data[level].race - 1; iSlot++) {
+         var separator = paper.rect().attr(historyParams.separatorAttr);
+         separator.attr({x: historyParams.x + iSlot * (historyParams.horseSize + historyParams.horizontalSpace) + historyParams.horseSize + historyParams.horizontalSpace / 2});
+         historyPanel.separators[iSlot] = separator;
+      }
+      */
+   };
+
+   /*var initValidate = function() {
+      validateButton = new Button(paper, paperParams.validateAttr.x, paperParams.validateAttr.y, paperParams.validateAttr.width, paperParams.validateAttr.height, &quot;Valider ma réponse&quot;);
+      validateButton.click(validate);
+   };*/
+
+   var loadPermutation = function() {
+      permutation = getRandomPermutation(data[level].horses, answer[level].seed);
+   };
+
+   var getRandomPermutation = function(size, seed) {
+      var result = [];
+      for (var index = 0; index &lt; size; index++) {
+         result.push(index);
+      }
+      var generator = new RandomGenerator(seed);
+      generator.shuffle(result);
+      return result;
+   };
+
+   var loadHorsesPositions = function() {
+      for (var iHorse in horses) {
+         setHorsePosition(horses[iHorse], answer[level].positions[iHorse], true, true);
+      }
+   };
+
+   var setHorsePosition = function(horse, position, updateCanvas, forceCanvas) {
+      var x = position.x;
+      var y = position.y;
+      if(forceCanvas) {
+         x = Math.min(horseMax.x, Math.max(horseMinPos.x, x));
+         y = Math.min(horseMax.y, Math.max(horseMinPos.y, y));
+         horse.placeHolderRect.attr({x: x, y: y});
+         horse.placeHolderLetter.attr({x: x + horseParams.width / 2, y: y + horseParams.height / 2});
+      }
+      if(updateCanvas) {
+         horse.canvasPosition = {
+            x: x,
+            y: y
+         };
+      }
+      horse.image.attr({
+         x: x,
+         y: y
+      });
+      horse.background.attr({
+         x: x,
+         y: y
+      });
+      horse.letter.attr({
+         x: x + horseParams.textOffset.x,
+         y: y + horseParams.textOffset.y
+      });
+      if (horse.selection) {
+         horse.selection.attr({
+            x: x,
+            y: y
+         });
+      }
+      if (horse.tag) {
+         horse.tag.attr({
+            x: x + horseParams.tagOffset.x,
+            y: y + horseParams.tagOffset.y
+         });
+      }
+   };
+
+   var getHorsePositions = function(horse) {
+      var x = horse.image.attrs.x;
+      var y = horse.image.attrs.y;
+      return {
+         x: x,
+         y: y
+      };
+   };
+
+   var saveHorsesPositions = function() {
+      for (var iHorse in horses) {
+         answer[level].positions[iHorse] = horses[iHorse].canvasPosition;
+      }
+   };
+
+   var drawHorse = function(index, x, y) {
+      var horse = {
+         index: index
+      };
+      horse.background = paper.rect(x, y, horseParams.width, horseParams.height).attr(&quot;fill&quot;, horseColors[index]);
+      horse.image = paper.image(horseParams.image, x, y, horseParams.width, horseParams.height);
+      horse.letter = paper.text(x, y, horseLetters[index]).attr(horseParams.letterAttr);
+      horse.letter[0].style.cursor = &quot;default&quot;;
+
+      horse.placeHolderLetter = paper.text(x + horseParams.width / 2, y + horseParams.height / 2, horseLetters[index]).attr(horseParams.placeHolderLetterAttr).toBack();
+      horse.placeHolderRect = paper.rect(x, y, horseParams.width, horseParams.height).attr(horseParams.placeHolderBorderAttr).toBack();
+
+      setHorsePosition(horse, {
+         x: x,
+         y: y
+      });
+      return horse;
+   };
+
+   var initPodium = function() {
+      if (podium) {
+         podium.remove();
+      }
+      var path = [&quot;M&quot;, podiumParams.bottomRightX, podiumParams.bottomRightY,
+         &quot;L&quot;, podiumParams.bottomRightX - 3 * podiumParams.slotWidth, podiumParams.bottomRightY,
+         &quot;L&quot;, podiumParams.bottomRightX - 3 * podiumParams.slotWidth, podiumParams.bottomRightY - podiumParams.heights[2],
+         &quot;L&quot;, podiumParams.bottomRightX - 2 * podiumParams.slotWidth, podiumParams.bottomRightY - podiumParams.heights[2],
+         &quot;L&quot;, podiumParams.bottomRightX - 2 * podiumParams.slotWidth, podiumParams.bottomRightY - podiumParams.heights[1],
+         &quot;L&quot;, podiumParams.bottomRightX - podiumParams.slotWidth, podiumParams.bottomRightY - podiumParams.heights[1],
+         &quot;L&quot;, podiumParams.bottomRightX - podiumParams.slotWidth, podiumParams.bottomRightY - podiumParams.heights[3],
+         &quot;L&quot;, podiumParams.bottomRightX, podiumParams.bottomRightY - podiumParams.heights[3],
+         &quot;Z&quot;
+      ];
+      podium = paper.path(path).attr(podiumParams.pathAttr);
+
+      var iSlot;
+      for(iSlot in podiumSlots) {
+         if (podiumSlots[iSlot]) {
+            podiumSlots[iSlot].remove();
+         }
+      }
+      podiumSlots = {};
+      for (iSlot = 1; iSlot &lt;= data[level].target; iSlot++) {
+         podiumSlots[iSlot] = paper.rect().attr(podiumParams.slotAttr);
+         podiumSlots[iSlot].attr(&quot;x&quot;, podiumParams.slotPositions[iSlot].x);
+         podiumSlots[iSlot].attr(&quot;y&quot;, podiumParams.slotPositions[iSlot].y);
+
+         paper.text(podiumParams.slotPositions[iSlot].x + podiumParams.slotAttr.width / 2, podiumParams.slotPositions[iSlot].y + podiumParams.textOffsetY, iSlot).attr(podiumParams.textAttr);
+      }
+      paper.text(podiumParams.bottomRightX - 1.5 * podiumParams.slotWidth, podiumParams.bottomRightY - 20, taskStrings.podium).attr(podiumParams.textAttr).attr({&quot;font-size&quot;: 16});
+      // {&quot;font-size&quot;: 16, &quot;font-weight&quot;: &quot;bold&quot;}
+   };
+
+   var loadHistory = function() {
+      for (var iElement in historyPanel.races) {
+         if (historyPanel.races[iElement]) {
+            historyPanel.races[iElement].remove();
+         }
+      }
+      historyPanel.title.attr({
+         y: historyParams.bottomY + historyParams.titleOffsetY - answer[level].races.length * (historyParams.horseSize + historyParams.verticalSpace)
+      });
+
+      if(answer[level].races.length &gt; 0) {
+         historyPanel.title.attr(&quot;text&quot;, historyParams.titleAttr.text);
+         for (var iSlot = 0; iSlot &lt; data[level].race; iSlot++) {
+            historyPanel[&quot;slot&quot; + iSlot].show();
+         }
+      }
+      else {
+         historyPanel.title.attr(&quot;text&quot;, &quot;&quot;);
+         for (var iSlot = 0; iSlot &lt; data[level].race; iSlot++) {
+            historyPanel[&quot;slot&quot; + iSlot].hide();
+         }
+      }
+
+      /*
+      for(var iSlot in historyPanel.separators) {
+         historyPanel.separators[iSlot].attr({
+            y: historyParams.bottomY - (answer[level].races.length - 1) * (historyParams.horseSize + historyParams.verticalSpace),
+            height: answer[level].races.length * (historyParams.horseSize + historyParams.verticalSpace)
+         });
+      }
+      */
+
+      historyPanel.races = {};
+      for (var iRace in answer[level].races) {
+         var result = getRaceResult(answer[level].races[iRace], permutation);
+         for (var index in result) {
+            var x = historyParams.x + index * (historyParams.horseSize + historyParams.horizontalSpace);
+            var y = historyParams.bottomY - (answer[level].races.length - 1 - iRace) * (historyParams.horseSize + historyParams.verticalSpace);
+            var iHorse = result[index];
+            var border = paper.rect().attr(historyParams.horseBorderAttr);
+            border.attr({
+               x: x,
+               y: y,
+               width: historyParams.horseSize,
+               height: historyParams.horseSize
+            });
+            var letter = paper.text().attr(historyParams.horseLetterAttr);
+            letter.attr({
+               text: horseLetters[result[index]]
+            });
+            letter.attr({
+               x: x + historyParams.horseSize / 2,
+               y: y + historyParams.horseSize / 2
+            });
+
+            historyPanel.races[&quot;race_&quot; + iRace + &quot;_index_&quot; + index + &quot;_border&quot;] = border;
+            historyPanel.races[&quot;race_&quot; + iRace + &quot;_index_&quot; + index + &quot;_letter&quot;] = letter;
+         }
+      }
+   };
+
+   var initRacePanel = function() {
+      racePanel.startButton = new Button(paper, racePanelParams.startButton.x, racePanelParams.startButton.y, racePanelParams.startButton.width, racePanelParams.startButton.height, racePanelParams.startButton.text);
+      racePanel.startButton.click(clickStart);
+
+      racePanel.prepareText = paper.text().attr(racePanelParams.prepareText);
+      racePanel.prepareText.attr(&quot;text&quot;, taskStrings.prepareRaceText(data[level].race));
+      racePanel.maxRaceText = paper.text().attr(racePanelParams.maxRaceText).hide();
+      racePanel.maxRaceText.attr(&quot;text&quot;, racePanelParams.maxRaceText.text.replace(/#/g, maxRaces));
+
+      clearRace();
+      racePanel.slotSquares = [];
+      for (var iSlot = 0; iSlot &lt; data[level].race; iSlot++) {
+         var slot = paper.rect().attr(racePanelParams.slot);
+         slot.attr(&quot;x&quot;, racePanelParams.slot.x + iSlot * (racePanelParams.slot.width + racePanelParams.slotPadding));
+         racePanel.slotSquares.push(slot);
+      }
+   };
+
+   var loadRacePanel = function() {
+      racePanel.prepareText.show();
+      racePanel.maxRaceText.hide();
+      racePanel.startButton.disable();
+      racePanel.startButton.show();
+      setSlotsDisplay(true);
+      clearRace();
+      checkMaxRaces();
+   };
+
+   var clearRace = function() {
+      racePanel.horses = {};
+      racePanel.raceSize = 0;
+   };
+
+   var applyHorseRaphael = function(horse, funcName, argsList) {
+      if (!argsList) {
+         argsList = [];
+      }
+      for (var iElement in horseParams.elements) {
+         var elementName = horseParams.elements[iElement];
+         if (horse[elementName]) {
+            horse[elementName][funcName].apply(horse[elementName], argsList);
+         }
+      }
+   };
+
+   var setSlotsDisplay = function(display) {
+      for (var iSlot in racePanel.slotSquares) {
+         if (display) {
+            racePanel.slotSquares[iSlot].show();
+         } else {
+            racePanel.slotSquares[iSlot].hide();
+         }
+      }
+   };
+
+   var initDrag = function() {
+      bindHorsesMouseEvents();
+
+      clearRace();
+      untagHorses();
+      racePanel.startButton.disable();
+
+      racePanel.prepareText.show();
+      racePanel.maxRaceText.hide();
+      setSlotsDisplay(true);
+   };
+
+   var bindHorsesMouseEvents = function() {
+      unbindHorsesMouseEvents();
+      for (var iHorse in horses) {
+         applyHorseRaphael(horses[iHorse], &quot;drag&quot;, [horseDragMove(iHorse), horseDragStart(iHorse), horseDragEnd(iHorse)]);
+      }
+   };
+
+   var unbindHorsesMouseEvents = function() {
+      for (var iHorse in horses) {
+         applyHorseRaphael(horses[iHorse], &quot;undrag&quot;);
+      }
+   };
+
+   var horseDragStart = function(iHorse) {
+      var handler = function() {
+         var horse = horses[iHorse];
+         horse.originalX = horse.image.attrs.x;
+         horse.originalY = horse.image.attrs.y;
+         horse.maxDiffX = 0;
+         horse.maxDiffY = 0;
+         applyHorseRaphael(horse, &quot;toFront&quot;);
+         horse.fromPodium = undefined;
+
+         for (var iSlot in podiumSlots) {
+            if(answer[level].podium[iSlot] === iHorse) {
+               horse.fromPodium = iSlot;
+               break;
+            }
+         }
+         racePanel.prepareText.attr(&quot;text&quot;, taskStrings.prepareRaceText(data[level].race));
+      };
+      return handler;
+   };
+
+   var horseDragMove = function(iHorse) {
+      var horse = horses[iHorse];
+      var handler = function(dx, dy) {
+         if (isNaN(dx) || isNaN(dy)) {
+            return;
+         }
+
+         var x = horse.originalX + dx;
+         var y = horse.originalY + dy;
+         horse.maxDiffX = Math.max(Math.abs(dx), horse.maxDiffX);
+         horse.maxDiffY = Math.max(Math.abs(dy), horse.maxDiffY);
+         var iSlot;
+
+         for (iSlot in podiumSlots) {
+            if (checkSnap(x, y, podiumParams.slotPositions[iSlot].x, podiumParams.slotPositions[iSlot].y, podiumParams.snap)) {
+               if (!answer[level].podium[iSlot] || answer[level].podium[iSlot] === iHorse) {
+                  x = podiumParams.slotPositions[iSlot].x;
+                  y = podiumParams.slotPositions[iSlot].y;
+                  answer[level].podium[iSlot] = iHorse;
+               }
+            } else {
+               if (answer[level].podium[iSlot] === iHorse) {
+                  delete answer[level].podium[iSlot];
+               }
+            }
+         }
+
+         if(answer[level].races.length &lt; maxRaces &amp;&amp; (horse.fromPodium === undefined)) {
+            for (iSlot in racePanel.slotSquares) {
+               if (checkSnap(x, y, racePanel.slotSquares[iSlot].attrs.x, racePanel.slotSquares[iSlot].attrs.y, podiumParams.snap)) {
+                  if(racePanel.horses[iSlot] &amp;&amp; racePanel.horses[iSlot] !== iHorse) {
+                     continue;
+                  }
+
+                  x = racePanel.slotSquares[iSlot].attrs.x;
+                  y = racePanel.slotSquares[iSlot].attrs.y;
+                  if (racePanel.horses[iSlot] !== iHorse) {
+                     racePanel.horses[iSlot] = iHorse;
+                     racePanel.raceSize++;
+                     onRaceChange();
+                  }
+               } else {
+                  if (racePanel.horses[iSlot] === iHorse) {
+                     delete racePanel.horses[iSlot];
+                     racePanel.raceSize--;
+                     onRaceChange();
+                  }
+               }
+            }
+         }
+
+         setHorsePosition(horse, {
+            x: x,
+            y: y
+         });
+      };
+      return handler;
+   };
+
+   var checkSnap = function(horseX, horseY, targetX, targetY, snapDistance) {
+      return Math.abs(horseX - targetX) &lt; snapDistance &amp;&amp; Math.abs(horseY - targetY) &lt; snapDistance;
+   };
+
+   var horseDragEnd = function(iHorse) {
+      var horse = horses[iHorse];
+      var handler = function() {
+         var jHorse;
+         var inRace = false;
+         var raceSlot = null;
+         var x = horse.image.attrs.x;
+         var y = horse.image.attrs.y;
+         for(jHorse in racePanel.horses) {
+            if(racePanel.horses[jHorse] === iHorse) {
+               inRace = true;
+               raceSlot = jHorse;
+               break;
+            }
+         }
+          
+         var cannotRaceFromPodium = &quot;Cannot put horse from\nthe podium on a race&quot;;
+
+         if(checkSnap(horse.originalX + horse.maxDiffX, horse.originalY + horse.maxDiffY, horse.originalX, horse.originalY, horseParams.dragThreshold)) {
+            if(inRace) {
+               setHorsePosition(horse, horse.canvasPosition);
+               delete racePanel.horses[raceSlot];
+               racePanel.raceSize--;
+               onRaceChange();
+               return;
+            }
+            if(isHorseOutside(horse)) {
+               setHorsePosition(horse, horse.canvasPosition);
+               onRaceChange();
+               return;
+            }
+            else if(answer[level].races.length &lt; maxRaces &amp;&amp; racePanel.raceSize &lt; data[level].race) {
+               if(horse.fromPodium !== undefined) {
+                  setHorsePosition(horse, horse.canvasPosition, true, true);
+                  racePanel.prepareText.attr(&quot;text&quot;, cannotRaceFromPodium);
+                  return;
+               }
+               for(var iSlot = 0; iSlot &lt; data[level].race; iSlot++) {
+                  if(racePanel.horses[iSlot] === undefined) {
+                     setHorsePosition(horse, {
+                        x: racePanel.slotSquares[iSlot].attrs.x,
+                        y: racePanel.slotSquares[iSlot].attrs.y
+                     });
+                     racePanel.horses[iSlot] = iHorse;
+                     racePanel.raceSize++;
+                     onRaceChange();
+                     break;
+                  }
+               }
+               return;
+            }
+         }
+         else {
+            if(horse.fromPodium !== undefined) {
+               for (var jSlot in racePanel.slotSquares) {
+                  if (checkSnap(x, y, racePanel.slotSquares[jSlot].attrs.x, racePanel.slotSquares[jSlot].attrs.y, podiumParams.snap)) {
+                     setHorsePosition(horse, horse.canvasPosition, true, true);
+                     answer[level].podium[horse.fromPodium] = iHorse;
+                     racePanel.prepareText.attr(&quot;text&quot;, cannotRaceFromPodium);
+                     return;
+                  }
+               }
+            }
+         }
+         if(!isHorseOutside(horse)) {
+            for(jHorse in horses) {
+               if(iHorse === jHorse) {
+                  continue;
+               }
+               var otherHorse = horses[jHorse];
+               if(checkSnap(x, y, otherHorse.image.attrs.x, otherHorse.image.attrs.y, horseParams.repelLimit)) {
+                  x += horseParams.repelDistance + randomGenerator.nextInt(0, horseParams.repelRandomOffset);
+                  y += horseParams.repelDistance + randomGenerator.nextInt(0, horseParams.repelRandomOffset);
+               }
+            }
+            setHorsePosition(horse, {x: x, y: y}, true, true);
+         }
+         else if(!inRace) {
+            setHorsePosition(horse, horse.canvasPosition, true);
+         }
+         onRaceChange();
+      };
+      return handler;
+   };
+
+   var isHorseOutside = function(horse) {
+      var x = horse.image.attrs.x;
+      var y = horse.image.attrs.y;
+      return x &lt; horseMinPos.x || x &gt; horseMax.x ||
+             y &lt; horseMinPos.y || y &gt; horseMax.y;
+   };
+
+   var onRaceChange = function() {
+      if(answer[level].races.length &gt;= maxRaces) {
+         return;
+      }
+      if(racePanel.raceSize === data[level].race) {
+         racePanel.startButton.enable();
+      }
+      else {
+         racePanel.startButton.disable();
+      }
+   };
+
+   var cleanFinishLine = function() {
+      for(var iHorse in horses) {
+         if(horses[iHorse].image.attrs.x &lt; paperParams.canvasAttr.x) {
+            setHorsePosition(horses[iHorse], horses[iHorse].canvasPosition);
+         }
+      }
+   };
+
+   var clickStart = function() {
+      cleanFinishLine();
+      var race = [];
+      for (var iHorse in racePanel.horses) {
+         race.push(racePanel.horses[iHorse]);
+      }
+      answer[level].races.push(race);
+      unbindHorsesMouseEvents();
+      simulateRace();
+   };
+
+   var simulateRace = function() {
+      stopExecution();
+      setSlotsDisplay(false);
+      racePanel.prepareText.hide();
+      racePanel.startButton.hide();
+      racePanel.maxRaceText.hide();
+      racePanel.startButton.disable();
+
+      simulation = new Simulation();
+      var step = new SimulationStep();
+      var params;
+      var iHorse;
+
+      for (iHorse in racePanel.horses) {
+         params = {
+            x: startLineParams.x + iHorse * startLineParams.padding,
+            y: startLineParams.y
+         };
+         step.addEntries(getHorseAnimationEntries(&quot;startLine&quot;, horses[racePanel.horses[iHorse]], params, animPreparing));
+      }
+      simulation.addStep(step);
+      sortedHorses = [];
+      for (iHorse in racePanel.horses) {
+         sortedHorses.push(iHorse);
+      }
+      sortedHorses.sort(function(iHorse, jHorse) {
+         return permutation[racePanel.horses[iHorse]] - permutation[racePanel.horses[jHorse]];
+      });
+      step = new SimulationStep();
+      for (iHorse in sortedHorses) {
+         var horse = horses[racePanel.horses[sortedHorses[iHorse]]];
+         params = {
+            x: finishLineX + iHorse * (racePanelParams.slotPadding + racePanelParams.slot.width)
+         };
+         step.addEntries(getHorseAnimationEntries(&quot;finishLine&quot;, horse, params, animRacing[iHorse]));
+      }
+      simulation.addStep(step);
+
+      simulation.addStepWithEntry({
+         name: &quot;finish&quot;,
+         action: {
+            onExec: onSimulationFinish
+         }
+      });
+
+      simulation.setAutoPlay(true);
+      simulation.play();
+   };
+
+   var getHorseAnimationEntries = function(name, horse, params, duration) {
+      var animateImage = function(params, duration, callback) {
+         return horse.image.animate(params, duration, callback);
+      };
+      var animateBackground = function(params, duration, callback) {
+         return horse.background.animate(params, duration, callback);
+      };
+      var animateLetter = function(params, duration, callback) {
+         var animParams = {};
+         if (params.x) {
+            animParams.x = params.x + horseParams.textOffset.x;
+         }
+         if (params.y) {
+            animParams.y = params.y + horseParams.textOffset.y;
+         }
+
+         return horse.letter.animate(animParams, duration, callback);
+      };
+      return [{
+         name: name + horse.index + &quot;image&quot;,
+         action: {
+            onExec: animateImage,
+            params: params,
+            duration: duration
+         }
+      }, {
+         name: name + horse.index + &quot;background&quot;,
+         action: {
+            onExec: animateBackground,
+            params: params,
+            duration: duration
+         }
+      }, {
+         name: name + horse.index + &quot;letter&quot;,
+         action: {
+            onExec: animateLetter,
+            params: params,
+            duration: duration
+         }
+      }];
+   };
+
+   var onSimulationFinish = function(params, duration, callback) {
+      loadHistory();
+      setSlotsDisplay(true);
+      racePanel.prepareText.show();
+      racePanel.startButton.show();
+      clearRace();
+      checkMaxRaces();
+      bindHorsesMouseEvents();
+      callback();
+   };
+
+   var checkMaxRaces = function() {
+      if(answer[level].races.length &lt; maxRaces) {
+         racePanel.maxRaceText.hide();
+         return;
+      }
+      racePanel.startButton.hide();
+      racePanel.prepareText.hide();
+      racePanel.maxRaceText.show();
+      setSlotsDisplay(false);
+   };
+
+   var tagHorses = function() {
+      for (var iHorse in sortedHorses) {
+         var horse = horses[racePanel.horses[sortedHorses[iHorse]].index];
+         tagHorse(horse, parseInt(iHorse) + 1);
+
+         horse = racePanel.horses[sortedHorses[iHorse]];
+         tagHorse(horse, parseInt(iHorse) + 1);
+      }
+   };
+
+   var tagHorse = function(horse, number) {
+      horse.tag = paper.text().attr(&quot;text&quot;, number).attr(horseParams.tagAttr);
+      var x = horse.image.attrs.x + horseParams.tagOffset.x;
+      var y = horse.image.attrs.y + horseParams.tagOffset.y;
+      horse.tag.attr({
+         x: x,
+         y: y
+      });
+   };
+
+   var untagHorses = function() {
+      for (var iHorse in horses) {
+         var horse = horses[iHorse];
+         if (horse.tag) {
+            horse.tag.remove();
+            delete horse.tag;
+         }
+      }
+   };
+
+   var getRaceResult = function(race, permutation) {
+      var result = $.extend([], race);
+      result.sort(function(iHorse, jHorse) {
+         return permutation[iHorse] - permutation[jHorse];
+      });
+      return result;
+   };
+
+   var stopExecution = function() {
+      if (simulation) {
+         simulation.stop();
+      }
+   };
+
+   /*
+   var validate = function() {
+      var resultAndMessage = getResultAndMessage(answer, level);
+      if (resultAndMessage.message) {
+         platform.validate(&quot;stay&quot;, function() {});
+         return;
+      }
+      platform.validate(&quot;done&quot;, function() {});
+   };
+   */
+
+   var getResultAndMessage = function(answer, level) {
+      // FOR DEBUG PERF
+      // var maxRaces = -1;
+      
+      if (answer[level].races.length &gt; maxRaces) {
+         return {
+            result: &quot;error&quot;,
+            message: &quot;Trop de courses.&quot; 
+               // Note: should never be displayed to the user
+         };
+      }
+      var iSlot;
+      for (iSlot = 1; iSlot &lt;= data[level].target; iSlot++) {
+         if (answer[level].podium[iSlot] === undefined) {
+            return {
+               result: &quot;error&quot;,
+               message: taskStrings.incomplete
+            };
+         }
+      }
+
+      var matrix = racesToMatrix(data[level].horses, answer[level].races, answer[level].seed);
+      floydWarshall(matrix);
+
+      var accumulatingPodium = {};
+      for (iSlot = 1; iSlot &lt;= data[level].target; iSlot++) {
+         var iHorse = answer[level].podium[iSlot];
+         accumulatingPodium[iHorse] = true;
+         if(countLosses(matrix, iHorse, accumulatingPodium) &gt; 0) {
+            return {
+               result: &quot;wrong&quot;,
+               message: taskStrings.incorrect
+            };
+         }
+         if(countWins(matrix, iHorse) !== matrix.length - iSlot) {
+            return {
+               result: &quot;bad&quot;,
+               message: taskStrings.incorrectCannotBeSure
+            };
+         }
+      }
+      if (data[level].optimal &lt; answer[level].races.length) {
+         return {
+            result: &quot;suboptimal&quot;,
+            steps: answer[level].races.length,
+            stepsOptimal: data[level].optimal
+         };
+      }
+      return {
+         result: &quot;optimal&quot;
+      };
+   };
+
+   var countWins = function(matrix, iHorse) {
+      var count = 0;
+      for (var iCol = 0; iCol &lt; matrix.length; iCol++) {
+         if (matrix[iHorse][iCol] !== Infinity &amp;&amp; iHorse != iCol) {
+            count++;
+         }
+      }
+      return count;
+   };
+
+   var countLosses = function(matrix, iHorse, ignore) {
+      var count = 0;
+      for(var iRow = 0; iRow &lt; matrix.length; iRow++) {
+         if(matrix[iRow][iHorse] !== Infinity &amp;&amp; iHorse != iRow &amp;&amp; !ignore[iRow]) {
+            count++;
+         }
+      }
+      return count;
+   };
+
+   var racesToMatrix = function(size, races, seed) {
+      var matrix = Beav.Matrix.init(size, size, function(row, col) {
+         if (row == col) {
+            return 0;
+         }
+         return Infinity;
+      });
+      var permutation = getRandomPermutation(size, seed);
+      for (var iRace in races) {
+         var result = getRaceResult(races[iRace], permutation);
+         for (var iHorse = 0; iHorse &lt; result.length; iHorse++) {
+            for (var jHorse = iHorse + 1; jHorse &lt; result.length; jHorse++) {
+               matrix[result[iHorse]][result[jHorse]] = 1;
+            }
+         }
+      }
+      return matrix;
+   };
+
+   var floydWarshall = function(matrix) {
+      for (var midNode = 0; midNode &lt; matrix.length; midNode++) {
+         for (var startNode = 0; startNode &lt; matrix.length; startNode++) {
+            for (var endNode = 0; endNode &lt; matrix.length; endNode++) {
+               if (matrix[startNode][endNode] &gt; matrix[startNode][midNode] + matrix[midNode][endNode]) {
+                  matrix[startNode][endNode] = matrix[startNode][midNode] + matrix[midNode][endNode];
+               }
+            }
+         }
+      }
+   };
+
+   grader.gradeTask = function(strAnswer, token, callback) {
+      task.getLevelGrade(strAnswer, token, callback, null);
+   };
+
+   task.getLevelGrade = function(strAnswer, token, callback, gradedLevel) {
+      var taskParams = displayHelper.taskParams;
+      var scores = {};
+      var messages = {};
+      var maxScores = displayHelper.getLevelsMaxScores();
+
+      if (strAnswer === '') {
+         callback(taskParams.minScore, '');
+         return;
+      }
+      var answer = $.parseJSON(strAnswer);
+      // clone the state to restore after grading.
+      var oldState = $.extend({}, task.getStateObject());
+      for (var curLevel in data) {
+         state.level = curLevel;
+         task.reloadStateObject(state, false);
+         var resultAndMessage = getResultAndMessage(answer, curLevel);
+         var relativeScore = 0.0;
+         if (resultAndMessage.message) {
+            relativeScore = 0.0;
+            messages[curLevel] = resultAndMessage.message;
+         } else {
+            if (resultAndMessage.result == &quot;optimal&quot;) {
+               relativeScore = 1.0;
+               messages[curLevel] = taskStrings.success;
+            } else { // &quot;suboptimal&quot;
+               // 60% if only one race way, else 40%
+               relativeScore = 4/10;
+               if (resultAndMessage.steps &lt;= resultAndMessage.stepsOptimal + 1) {
+                  relativeScore = 6/10;
+               }
+               messages[curLevel] = taskStrings.successPartial(resultAndMessage.steps, resultAndMessage.stepsOptimal);
+            }
+         }
+         scores[curLevel] = levelScoreInterpolate(maxScores, curLevel, relativeScore);
+      }
+
+      task.reloadStateObject(oldState, false);
+      if (!gradedLevel) {
+         displayHelper.sendBestScore(callback, scores, messages);
+      } else {
+         callback(scores[gradedLevel], messages[gradedLevel]);
+      }
+   };
+}
+initTask();
+
+"></div>
+<div class="js-module-2015-SI-05-horse-races" data-content="httpcodejquerycomjquery171minjs"></div>
+<div class="js-module-2015-SI-05-horse-races" data-content="jqueryuitouchpunchminjs"></div>
+<div class="js-module-2015-SI-05-horse-races" data-content="httpcdnjscloudflarecomajaxlibsraphael221raphaelminjs"></div>
+<div class="js-module-2015-SI-05-horse-races" data-content="httpsgithubcomdouglascrockfordJSONjs"></div>
+<div class="js-module-2015-SI-05-horse-races" data-content="httpwwwfranceioiorgmodulespemFioibeavertaskjs"></div>
+<div class="js-module-2015-SI-05-horse-races" data-content="httpwwwfranceioiorgmodulespemFioibeav10js"></div>
+<div class="js-module-2015-SI-05-horse-races" data-content="httpwwwfranceioiorgmodulespemFioisimulation10js"></div>
+<div class="js-module-2015-SI-05-horse-races" data-content="httpwwwfranceioiorgmodulespemFioirandomGenerator10js"></div>
+<div class="js-module-2015-SI-05-horse-races" data-content="httpwwwfranceioiorgmodulespemFioiraphaelButton10js"></div>
+<div class="js-module-2015-SI-05-horse-races" data-content="httpwwwfranceioiorgmodulesintegrationAPI01officialplatformprjs"></div>
+<div class="js-module-2015-SI-05-horse-races" data-content="httpwwwfranceioiorgmodulesintegrationAPI01installationAPI01pemFioibuttonsAndMessagesjs"></div>
+<div class="css-module-2015-SI-05-horse-races" data-content="httpwwwfranceioiorgmodulespemFioitaskStyles01css"></div>
