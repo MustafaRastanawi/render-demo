@@ -2,13 +2,13 @@
 
 // Database
 
-$config->db->use = 'db';
+$config->db->use = 'mysql';
 $config->db->testMode = false;
 $config->db->dynamoSessions = false; // true to use dynamoDB sessions, string to use a specific table
 $config->db->dynamoDBPrefix = ''; // prefix for sessions, team and team_question
 
 // MySQL
-$config->db->mysql->host = '127.0.0.1';
+$config->db->mysql->host = 'db';
 $config->db->mysql->database = 'beaver_contest';
 $config->db->mysql->user = 'bebras';
 $config->db->mysql->password = 'bebras';
@@ -35,10 +35,10 @@ $config->defaultLanguage = 'en';
 $config->teacherInterface->countryCode = 'FR';
 
 // Teacher interface settings
-$config->teacherInterface->sCoordinatorFolder = 'https://bebras-render-demo.onrender.com/teacherInterface/';
-$config->teacherInterface->sAssetsStaticPath = 'https://bebras-render-demo.onrender.com/contestInterface/';
-$config->teacherInterface->sAbsoluteStaticPath = 'https://bebras-render-demo.onrender.com/contestInterface/';
-$config->teacherInterface->sAbsoluteStaticPathOldIE = 'https://bebras-render-demo.onrender.com/contestInterface/';
+$config->teacherInterface->sCoordinatorFolder = 'http://localhost:8080/teacherInterface/';
+$config->teacherInterface->sAssetsStaticPath = 'http://localhost:8080/contestInterface/';
+$config->teacherInterface->sAbsoluteStaticPath = 'http://localhost:8080/contestInterface/';
+$config->teacherInterface->sAbsoluteStaticPathOldIE = 'http://localhost:8080/contestInterface/';
 $config->teacherInterface->genericPasswordMd5 = '';
 $config->teacherInterface->generationMode = 'local';
 $config->teacherInterface->sContestGenerationPath = '/../contestInterface/contests/'; // *MUST* be relative!
@@ -46,8 +46,8 @@ $config->teacherInterface->forceOfficialEmailDomain = false;
  // indicate the ID of the contest for which password will be automatically generated for teachers
 $config->teacherInterface->teacherPersonalCodeContestID = 0;
 
-$config->contestInterface->sAssetsStaticPathNoS3 = 'https://bebras-render-demo.onrender.com/contestInterface/';
-$config->contestInterface->sAbsoluteStaticPathNoS3 = 'https://bebras-render-demo.onrender.com/contestInterface/';
+$config->contestInterface->sAssetsStaticPathNoS3 = 'http://localhost:8080/contestInterface/';
+$config->contestInterface->sAbsoluteStaticPathNoS3 = 'http://localhost:8080/contestInterface/';
 
 $config->grades = [-1,3,4,5,6,7,8,9,10,11,12,-4];
 $config->defaultCategory = '';
@@ -56,11 +56,11 @@ $config->trainingContestID = '56';
 
 
 // URLs
-$config->teacherInterface->baseUrl = 'https://bebras-render-demo.onrender.com/teacherInterface/';
-$config->contestInterface->baseUrl = 'https://bebras-render-demo.onrender.com/contestInterface/';
-$config->certificates->webServiceUrl =  'https://bebras-render-demo.onrender.com/contestInterface/';
-$config->contestPresentationURL = 'https://bebras-render-demo.onrender.com/contestInterface/';
-$config->contestOfficialURL = 'https://bebras-render-demo.onrender.com/contestInterface/';
+$config->teacherInterface->baseUrl = 'http://localhost:8080/teacherInterface/';
+$config->contestInterface->baseUrl = 'http://localhost:8080/contestInterface/';
+$config->certificates->webServiceUrl =  'http://localhost:8080/contestInterface/';
+$config->contestPresentationURL = 'http://localhost:8080/contestInterface/';
+$config->contestOfficialURL = 'http://localhost:8080/contestInterface/';
 $config->contestBackupURL = '';
 $config->useCustomStrings = false; // see README
 
