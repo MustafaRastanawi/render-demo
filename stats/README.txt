@@ -1,6 +1,6 @@
 
-http://localhost/beaver_platform/stats/stats.php?prepare=1
-http://localhost/beaver_platform/stats/stats.php?type=resolution_stats&contestIDs=32-37
+http://your-local-web-root/beaver_platform/stats/stats.php?prepare=1
+http://your-local-web-root/beaver_platform/stats/stats.php?type=resolution_stats&contestIDs=32-37
 
 
 
@@ -38,10 +38,10 @@ execute on table:
    AND `group`.participationType = 'Official';
 
 
-http://localhost/beaver_platform/stats/stats.php?contests=32-37
+http://your-local-web-root/beaver_platform/stats/stats.php?contests=32-37
 
 if changes to stats.php, run:
-http://localhost/beaver_platform/stats/stats.php?contests=32-37&reset=1
+http://your-local-web-root/beaver_platform/stats/stats.php?contests=32-37&reset=1
 
 
 

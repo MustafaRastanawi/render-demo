@@ -1,11 +1,23 @@
 <?php
-$baseUrl = 'https://bebras-render-demo.onrender.com';
+require_once __DIR__ . '/config.php';
+
+$baseUrl = bebras_normalize_public_origin(
+   $config->contestInterface->baseUrl,
+   bebras_is_production_runtime(),
+   !bebras_is_production_runtime(),
+   true
+);
+if ($baseUrl === false) {
+   $baseUrl = '';
+}
+$baseUrlHtml = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8');
 ?>
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="<?php echo $baseUrlHtml; ?>/contestInterface/favicon.ico">
   <title>Bebras Platform Demo</title>
   <style>
     :root {
@@ -89,9 +101,9 @@ $baseUrl = 'https://bebras-render-demo.onrender.com';
     <h1>Bebras Platform Demo</h1>
     <p>This public Render demo lets you try the student contest area and the teacher/coordinator tools with sample data.</p>
     <div class="actions" aria-label="Demo navigation">
-      <a class="button" href="/contestInterface/">Student contest</a>
-      <a class="button" href="/teacherInterface/">Teacher/coordinator</a>
-      <a class="button" href="/help/">Demo help guide</a>
+      <a class="button" href="<?php echo $baseUrlHtml; ?>/contestInterface/">Student contest</a>
+      <a class="button" href="<?php echo $baseUrlHtml; ?>/teacherInterface/">Teacher/coordinator</a>
+      <a class="button" href="<?php echo $baseUrlHtml; ?>/help/">Demo help guide</a>
     </div>
   </main>
 </body>

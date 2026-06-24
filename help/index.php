@@ -1,11 +1,23 @@
 <?php
-$baseUrl = 'https://bebras-render-demo.onrender.com';
+require_once __DIR__ . '/../config.php';
+
+$baseUrl = bebras_normalize_public_origin(
+   $config->contestInterface->baseUrl,
+   bebras_is_production_runtime(),
+   !bebras_is_production_runtime(),
+   true
+);
+if ($baseUrl === false) {
+   $baseUrl = '';
+}
+$baseUrlHtml = htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8');
 ?>
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="<?php echo $baseUrlHtml; ?>/contestInterface/favicon.ico">
   <title>Bebras Platform Demo Guide</title>
   <style>
     :root {
@@ -141,10 +153,10 @@ $baseUrl = 'https://bebras-render-demo.onrender.com';
     <section>
       <h2>Demo Links</h2>
       <div class="links">
-        <a href="<?php echo $baseUrl; ?>/">Home / root<br><code><?php echo $baseUrl; ?></code></a>
-        <a href="<?php echo $baseUrl; ?>/teacherInterface/">Teacher / coordinator<br><code><?php echo $baseUrl; ?>/teacherInterface/</code></a>
-        <a href="<?php echo $baseUrl; ?>/contestInterface/">Student / contest<br><code><?php echo $baseUrl; ?>/contestInterface/</code></a>
-        <a href="<?php echo $baseUrl; ?>/help/">Help<br><code><?php echo $baseUrl; ?>/help/</code></a>
+        <a href="<?php echo $baseUrlHtml; ?>/">Home / root<br><code><?php echo $baseUrlHtml; ?></code></a>
+        <a href="<?php echo $baseUrlHtml; ?>/teacherInterface/">Teacher / coordinator<br><code><?php echo $baseUrlHtml; ?>/teacherInterface/</code></a>
+        <a href="<?php echo $baseUrlHtml; ?>/contestInterface/">Student / contest<br><code><?php echo $baseUrlHtml; ?>/contestInterface/</code></a>
+        <a href="<?php echo $baseUrlHtml; ?>/help/">Help<br><code><?php echo $baseUrlHtml; ?>/help/</code></a>
       </div>
     </section>
 

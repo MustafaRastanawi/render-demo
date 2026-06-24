@@ -6,6 +6,65 @@
 global $config;
 $config = (object) array();
 
+if (!function_exists('bebras_env_value')) {
+   function bebras_env_value($name) {
+      $value = getenv($name);
+      return ($value === false) ? '' : trim($value);
+   }
+}
+
+if (!function_exists('bebras_env_is_truthy')) {
+   function bebras_env_is_truthy($value) {
+      return in_array(strtolower(trim($value)), array('1', 'true', 'yes', 'on'), true);
+   }
+}
+
+if (!function_exists('bebras_is_production_runtime')) {
+   function bebras_is_production_runtime() {
+      return bebras_env_is_truthy(bebras_env_value('RENDER'))
+         || strtolower(bebras_env_value('BEBRAS_ENV')) === 'production';
+   }
+}
+
+if (!function_exists('bebras_normalize_public_origin')) {
+   function bebras_normalize_public_origin($url, $requireHttps = false, $allowLocal = false, $allowPath = false) {
+      $url = trim($url);
+      if ($url === '') {
+         return false;
+      }
+
+      $parts = parse_url($url);
+      if ($parts === false || empty($parts['scheme']) || empty($parts['host'])) {
+         return false;
+      }
+
+      $scheme = strtolower($parts['scheme']);
+      if (!in_array($scheme, array('http', 'https'), true)) {
+         return false;
+      }
+      if ($requireHttps && $scheme !== 'https') {
+         return false;
+      }
+
+      $path = isset($parts['path']) ? $parts['path'] : '';
+      if (!$allowPath && $path !== '' && $path !== '/') {
+         return false;
+      }
+      if (isset($parts['query']) || isset($parts['fragment']) || isset($parts['user']) || isset($parts['pass'])) {
+         return false;
+      }
+
+      $host = strtolower(trim($parts['host'], '[]'));
+      $blockedHosts = array('localhost', '127.0.0.1', '0.0.0.0', '::1');
+      if (!$allowLocal && (in_array($host, $blockedHosts, true) || substr($host, -10) === '.localhost')) {
+         return false;
+      }
+
+      $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+      return $scheme . '://' . $parts['host'] . $port;
+   }
+}
+
 $config->maintenanceUntil = null; // maintenance end time (null if no maintenance)
 
 // Minimum common.js version required by the platform
@@ -172,7 +231,7 @@ $config->transferTeamQuestion = (object) array(
 $config->validationMailBody = "Bonjour,\r\n\r\nPour valider votre inscription en tant que coordinateur pour le concours Castor, ouvrez le lien suivant dans votre navigateur  : \r\n\r\n%s\r\n\r\nN'hésitez pas à nous contacter si vous rencontrez des difficultés.\r\n\r\nCordialement,\r\n-- \r\nL'équipe du Castor Informatique";
 $config->validationMailTitle = "Castor Informatique : validation d'inscription";
 
-if (is_readable(__DIR__.'/config_local.php')) {
+if (!bebras_is_production_runtime() && is_readable(__DIR__.'/config_local.php')) {
    include_once __DIR__.'/config_local.php';
 }
 if (is_readable(__DIR__.'/config/index.php')) {

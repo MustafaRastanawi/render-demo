@@ -3,6 +3,72 @@ set -e
 
 PORT="${PORT:-10000}"
 
+resolve_public_origin() {
+  if [ -n "${APP_PUBLIC_BASE_URL:-}" ]; then
+    printf '%s' "$APP_PUBLIC_BASE_URL"
+    return 0
+  fi
+
+  if [ -n "${RENDER_EXTERNAL_URL:-}" ]; then
+    printf '%s' "$RENDER_EXTERNAL_URL"
+    return 0
+  fi
+
+  if [ -n "${RENDER_EXTERNAL_HOSTNAME:-}" ]; then
+    local render_hostname="${RENDER_EXTERNAL_HOSTNAME#https://}"
+    render_hostname="${render_hostname#http://}"
+    printf 'https://%s' "$render_hostname"
+    return 0
+  fi
+
+  echo "Missing APP_PUBLIC_BASE_URL, RENDER_EXTERNAL_URL, or RENDER_EXTERNAL_HOSTNAME." >&2
+  return 1
+}
+
+validate_public_origin() {
+  local raw_origin="$1"
+
+  php -r '
+$origin = trim($argv[1] ?? "");
+$fail = function($message) {
+    fwrite(STDERR, "Unsafe production public origin: " . $message . PHP_EOL);
+    exit(1);
+};
+$parts = parse_url($origin);
+if ($origin === "" || $parts === false) {
+    $fail("missing or invalid URL");
+}
+$scheme = strtolower($parts["scheme"] ?? "");
+$host = $parts["host"] ?? "";
+$hostForCheck = strtolower(trim($host, "[]"));
+$path = $parts["path"] ?? "";
+if ($scheme !== "https") {
+    $fail("URL must use https");
+}
+if ($host === "") {
+    $fail("URL must include a host");
+}
+if ($path !== "" && $path !== "/") {
+    $fail("URL must not include a path");
+}
+foreach (array("query", "fragment", "user", "pass") as $partName) {
+    if (isset($parts[$partName])) {
+        $fail("URL must not include " . $partName);
+    }
+}
+$blockedHosts = array("localhost", "127.0.0.1", "0.0.0.0", "::1");
+if (in_array($hostForCheck, $blockedHosts, true) || substr($hostForCheck, -10) === ".localhost") {
+    $fail("URL must not point to a local host");
+}
+$port = isset($parts["port"]) ? ":" . $parts["port"] : "";
+echo "https://" . $host . $port;
+' "$raw_origin"
+}
+
+PUBLIC_ORIGIN="$(validate_public_origin "$(resolve_public_origin)")"
+export APP_PUBLIC_BASE_URL="$PUBLIC_ORIGIN"
+
+echo "Using public origin ${PUBLIC_ORIGIN}"
 echo "Configuring Apache for Render PORT..."
 sed -i "s/^Listen .*/Listen 0.0.0.0:${PORT}/" /etc/apache2/ports.conf
 sed -i "s/<VirtualHost \*:.*/<VirtualHost *:${PORT}>/" /etc/apache2/sites-available/000-default.conf
@@ -17,7 +83,18 @@ normalize_demo_contest_assets() {
 
   echo "Normalizing Render demo contest assets..."
   find "$demo_contest_dir" -type f \( -name "*.html" -o -name "*.js" \) -print0 |
-    xargs -0 -r sed -i 's#https://bebras-render-demo\.onrender\.com/contestInterface/#/contestInterface/#g'
+    xargs -0 -r sed -i -E \
+      -e 's#https://bebras-render-demo\.onrender\.com/contestInterface/#/contestInterface/#g' \
+      -e 's#https?://localhost:8080/contestInterface/#/contestInterface/#g' \
+      -e 's#https?://127\.0\.0\.1:8080/contestInterface/#/contestInterface/#g' \
+      -e 's#https?://0\.0\.0\.0:8080/contestInterface/#/contestInterface/#g'
+
+  if find "$demo_contest_dir" -type f \( -name "*.html" -o -name "*.js" \) -print0 |
+      xargs -0 -r grep -n 'localhost:8080'; then
+    echo "Unsafe localhost:8080 URLs remain in generated demo contest assets." >&2
+    return 1
+  fi
+
   chmod -R a+rX "$demo_contest_dir"
 }
 
@@ -326,7 +403,7 @@ SQL
   mysql -ubebras -pbebras -h127.0.0.1 beaver_contest -e "SELECT ID, name, contestID, code, password, isPublic FROM \`group\` WHERE code = 'yft7zkqt';" || echo "Sample student group query failed."
 }
 
-normalize_demo_contest_assets || echo "Render demo asset normalization failed." >&2
+normalize_demo_contest_assets
 echo "Starting database bootstrap in background..."
 (bootstrap_database || echo "Database bootstrap failed." >&2) &
 echo "Starting Apache on port ${PORT}..."
