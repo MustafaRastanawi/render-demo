@@ -852,7 +852,7 @@ try {
 
   function updateImagesHTTP() {
     // Downgrade images to HTTP if needed
-    if(!window.config.downgradeToHTTP) { return; }
+    if(!window.config || !window.config.downgradeToHTTP) { return; }
     $('img').each(function(idx, elem) {
       elem = $(elem);
       var url = elem.attr('src');
