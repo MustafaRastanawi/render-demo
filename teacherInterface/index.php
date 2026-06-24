@@ -31,11 +31,7 @@
          <span style="color:red;font-weight:bold" data-i18n="loading"></span>
       </div>
 
-      <div id="headerWarning" class="dialog" style="display:none"><!--
-            <p><b>Relisez et corrigez</b> d'éventuelles erreurs dans les noms et prénoms de vos élèves. Lorsqu'un paricipant est un enseignant et non un élève, ajoutez [E] devant son nom afin de vous assurer qu'il ne sera pas considéré dans le classement des élèves. Par exemple si l'enseignant est Jacques Dupont, mettez "[E] Dupont" pour son nom</p>
-            <p>Les <b>scores de vos élèves</b> sont disponibles. Vous avez jusqu'au 23 Novembre pour nous signaler toute anomalie. Les scores <b>deviendront définitfs le 25 Novembre</b>. Assurez-vous que si l'un ou plusieurs de vos élèves ont eu une erreur de connexion à la fin de leur épreuve avec un code à nous envoyer par mail, ils nous envoient bien ce mail avant le 23 Novembre s'ils ne l'ont pas déjà fait.</p>
-            <p>Notez aussi que si vous avez mis par erreur "oui" dans la colonne <b>Hors classement</b> d'un groupe d'élèves, il est encore temps de le modifier pour que vos élèves soient classés. Vous pouvez aussi modifier le nom d'un groupe pour le reconnaître plus facilement dans la liste des équipes.</p>
-            -->
+      <div id="headerWarning" class="dialog" style="display:none">
          <div data-i18n="[html]announcement"></div>
          <div id='spread-castor'>
             <h2 data-i18n="[html]spread_castor_title"></h2>

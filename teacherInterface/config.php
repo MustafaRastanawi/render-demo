@@ -12,7 +12,7 @@ function static_asset($path) {
 	if ($config->timestamp !== false) {
 		$qs = '?v=' . $config->timestamp;
 	}
-	return $config->teacherInterface->baseUrl . $path . $qs;
+	return rtrim($config->teacherInterface->baseUrl, '/') . '/' . ltrim($path, '/') . $qs;
 }
 
 function script_tag($path) {

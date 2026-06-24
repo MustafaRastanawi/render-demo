@@ -81,7 +81,7 @@ if ($config->teacherInterface->generationMode == 'local') {
    ));
    $graders = $graders['Body'].''; // need to cast to string
 } else {
-   $gradersUrl = $config->teacherInterface->sAbsoluteStaticPath.'/contests/'.$contestFolder.'/contest_'.$contestID.'_graders.html';
+   $gradersUrl = join_url_path($config->teacherInterface->sAbsoluteStaticPath, 'contests/'.$contestFolder.'/contest_'.$contestID.'_graders.html');
 }
 
 header("Content-Type: application/json");

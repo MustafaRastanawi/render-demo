@@ -67,11 +67,14 @@ echo "https://" . $host . $port;
 
 PUBLIC_ORIGIN="$(validate_public_origin "$(resolve_public_origin)")"
 export APP_PUBLIC_BASE_URL="$PUBLIC_ORIGIN"
+PUBLIC_HOST="$(php -r '$parts = parse_url($argv[1]); echo $parts["host"] ?? "localhost";' "$PUBLIC_ORIGIN")"
 
 echo "Using public origin ${PUBLIC_ORIGIN}"
 echo "Configuring Apache for Render PORT..."
 sed -i "s/^Listen .*/Listen 0.0.0.0:${PORT}/" /etc/apache2/ports.conf
 sed -i "s/<VirtualHost \*:.*/<VirtualHost *:${PORT}>/" /etc/apache2/sites-available/000-default.conf
+printf 'ServerName %s\nUseCanonicalName Off\nUseCanonicalPhysicalPort Off\n' "$PUBLIC_HOST" > /etc/apache2/conf-available/render-public-origin.conf
+a2enconf render-public-origin >/dev/null
 
 normalize_demo_contest_assets() {
   local demo_contest_dir="contestInterface/contests/2015_castor_ajakjtxnasj.1778420233"

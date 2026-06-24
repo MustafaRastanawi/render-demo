@@ -13,9 +13,9 @@
   script_tag('/bower_components/jquery/jquery.min.js');
 ?>
 <script type="text/javascript">
-  window.contestsRoot = <?= json_encode(upgrade_url($config->teacherInterface->sAbsoluteStaticPath.'/contests')) ?>;
-  window.sAbsoluteStaticPath = <?= json_encode(upgrade_url($config->teacherInterface->sAbsoluteStaticPath.'/')) ?>;
-  window.sAssetsStaticPath = <?= json_encode(upgrade_url($config->teacherInterface->sAssetsStaticPath.'/')) ?>;
+  window.contestsRoot = <?= json_encode(upgrade_url(join_url_path($config->teacherInterface->sAbsoluteStaticPath, 'contests'))) ?>;
+  window.sAbsoluteStaticPath = <?= json_encode(upgrade_url(join_url_path($config->teacherInterface->sAbsoluteStaticPath, ''))) ?>;
+  window.sAssetsStaticPath = <?= json_encode(upgrade_url(join_url_path($config->teacherInterface->sAssetsStaticPath, ''))) ?>;
   window.timestamp = <?= json_encode($config->timestamp) ?>;
   window.config = <?= json_encode([
     "defaultLanguage" => $config->defaultLanguage,
@@ -184,8 +184,8 @@ try {
 
   <div id="tab-school" class="tabContent">
     <!--
-    <p>Pour <b>voir votre score détaillé</b> si vous avez participé au concours 2012, cliquez sur "Continuer le concours" et saisissez votre code personnel fourni au début de l'épreuve. Vous aurez aussi accès aux réponses et à une <b>correction détaillée</b> en dessous de chaque question.</p>
-    <h3>Vous démarrez un concours en classe, pour la première fois ?</h3>
+    <p>To <b>view your detailed score</b> if you participated in the 2012 contest, click "Continue the contest" and enter the personal code provided at the beginning of the contest. You will also have access to answers and detailed feedback under each question.</p>
+    <h3>Are you starting a classroom contest for the first time?</h3>
     -->
     <div id="submitParticipationCode" <?=(!$browserVerified || $browserOld) ? 'class="needBrowserConfirm"' : '' ?>>
       <div class="tabTitle" data-i18n="general_start_contest"></div>
@@ -376,7 +376,7 @@ try {
         </td>
         <td class="languageSelector selectorTitle" data-language="blockly"><button type="button" class="btn btn-default" data-i18n="language_blockly"></button></td>
         <td class="languageSelector" data-language="blockly">
-          <img src="<?= static_asset('/images/blockly.png') ?>" alt="exemple d'utilisation de Blockly">
+          <img src="<?= static_asset('/images/blockly.png') ?>" alt="Example of using Blockly">
         </td>
         <td class="languageSelector languageDescription" data-language="blockly" data-i18n="[html]language_blockly_description">
         </td>
@@ -387,7 +387,7 @@ try {
         </td>
         <td class="languageSelector selectorTitle" data-language="scratch"><button type="button" class="btn btn-default" data-i18n="language_scratch"></button></td>
         <td class="languageSelector" data-language="scratch">
-          <img src="<?= static_asset('/images/scratch.png') ?>" alt="exemple d'utilisation de Scratch">
+          <img src="<?= static_asset('/images/scratch.png') ?>" alt="Example of using Scratch">
         </td>
         <td class="languageSelector languageDescription" data-language="scratch" data-i18n="[html]language_scratch_description">
         </td>
@@ -398,7 +398,7 @@ try {
         </td>
         <td class="languageSelector selectorTitle" data-language="python"><button type="button" class="btn btn-default" data-i18n="language_python"></button></td>
         <td class="languageSelector" data-language="python">
-          <img src="<?= static_asset('/images/python.png') ?>" alt="exemple d'utilisation de Python">
+          <img src="<?= static_asset('/images/python.png') ?>" alt="Example of using Python">
         </td>
         <td class="languageSelector languageDescription" data-language="python" data-i18n="[html]language_python_description">
         </td>
@@ -620,7 +620,7 @@ try {
       <tr><td><span data-i18n="last_name"></span> :</td><td id="persoLastName"></td></tr>
       <tr id="persoGradeRow"><td><span data-i18n="grade"></span> :</td><td id="persoGrade"></td></tr>
       <tr id="persoCategoryRow"><td><span data-i18n="personal_page_qualified_category"></span> :</td><td id="persoCategory"></td></tr>
-      <!--<tr><td>Qualifié en demi-finale :</td><td id="persoSemifinal"></td></tr>-->
+      <!--<tr><td>Qualified for the semifinal:</td><td id="persoSemifinal"></td></tr>-->
    </table>
    <p id="persoGradeUpdate">
      <span data-i18n="personal_page_grade_update_prompt"></span><br>
@@ -892,8 +892,8 @@ try {
 </script>
 <!--[if IE 6]>
 <script>
-window.sAbsoluteStaticPath = <?= json_encode(upgrade_url($config->teacherInterface->sAbsoluteStaticPathOldIE.'/')) ?>;
-window.contestsRoot = <?= json_encode(upgrade_url($config->teacherInterface->sAbsoluteStaticPathOldIE.'/contests')) ?>;
+window.sAbsoluteStaticPath = <?= json_encode(upgrade_url(join_url_path($config->teacherInterface->sAbsoluteStaticPathOldIE, ''))) ?>;
+window.contestsRoot = <?= json_encode(upgrade_url(join_url_path($config->teacherInterface->sAbsoluteStaticPathOldIE, 'contests'))) ?>;
 </script>
 <![endif]-->
 <!--[if lte IE 9]>

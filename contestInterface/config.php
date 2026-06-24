@@ -32,13 +32,17 @@ function upgrade_url($url) {
 	return $url;
 }
 
+function join_url_path($base, $path) {
+	return rtrim($base, '/') . '/' . ltrim($path, '/');
+}
+
 function static_asset($path) {
 	global $config;
 	$qs = '';
 	if ($config->timestamp !== false) {
 		$qs = '?v=' . $config->timestamp;
 	}
-	return upgrade_url($config->teacherInterface->sAssetsStaticPath . $path . $qs);
+	return upgrade_url(join_url_path($config->teacherInterface->sAssetsStaticPath, $path) . $qs);
 }
 
 function script_tag($path) {

@@ -304,7 +304,7 @@ function getGroupsColModel() {
             comment: t("expectedStartTime_comment")
          },
          name: {label: t("group_name_label"), longLabel: t("group_name_long_label"), editable: true, edittype: "text", width: 200, required: true, comment: t("group_name_comment")},
-/*         gradeDetail: {label: "Préciser", editable: true, edittype: "text", width: 200, required: false, comment: "Information qui nous aidera à estimer la diffusion du concours dans les différentes filières et niveaux éducatifs"},*/
+/*         gradeDetail: {label: "Details", editable: true, edittype: "text", width: 200, required: false, comment: "Information used to estimate contest distribution across school tracks and levels"},*/
          code: {label: t("group_code_label"), width: 100},
          password: {label: t("group_password_label"), width: 100},
          nbTeamsEffective: {label: t("group_nbTeamsEffective_label"), width: 100},
@@ -437,7 +437,7 @@ function initModels(isLogged) {
                editable: true, edittype: "select", editoptions:{ value:{"1": t("option_female"), "2": t("option_male")}},
                stype: "select", searchoptions:{ value:"_NOF_:" + t("option_no_filter") + ";1:" + t("option_female") + ";2:" + t("option_male")},
                width: 75},
-            //contestants: {label: "Équipe", editable: false, width:300},
+            //contestants: {label: "Team", editable: false, width:300},
             grade: {label: t("contestant_grade_label"), editable: true, edittype: "select", required: true, editoptions:{
                value:getGradesList(false)}, searchoptions:{ value:"_NOF_:" + t("option_no_filter") + getGradesList(true)},
                stype: "select", width:75},
@@ -1032,7 +1032,7 @@ function loadGrid(modelName, sortName, rowNum, rowList, onSelectRow, withToolbar
               }
               /*
               if (school.userID !== loggedUser.ID) {
-                 alert("Seul le créateur de cet établissement (" + school.userLastName + " " + school.userFirstName + ") peut l'éditer");
+                 alert("Only the creator of this school (" + school.userLastName + " " + school.userFirstName + ") can edit it");
                  return;
               }
               */
@@ -1571,7 +1571,7 @@ function loadContests() {
          }
          if (contestID == "884044050337033997") { // hard-coded special case for Algorea 2018
             nbContests += 1;
-            contestList += '<li><button type="button" onclick="printSchoolCertificates(\'algorea\')" class="btn btn-default">Concours Algoréa</button></li>';
+            contestList += '<li><button type="button" onclick="printSchoolCertificates(\'algorea\')" class="btn btn-default">Algorea contest</button></li>';
          }
       }
       contestList += "</ul>";
@@ -1640,7 +1640,7 @@ function loadSchoolsYears(school_users) {
                }
                $(this).dialog( "close" );
             }}];
-            //jqAlert(t("alert_awards_received"), null, buttons); // TODO : paramètre pour le nb de lots, établissement
+            //jqAlert(t("alert_awards_received"), null, buttons); // TODO: parameter for award count, school
          }
       }
    });
@@ -1714,8 +1714,8 @@ function groupFormShowContestDetails(contestID) {
       }
    }
    if (strCategories != "") {
-      strCategories = "<br/><p>Catégorie minumum : <select id='group_minCategory'><option value=''>Aucune</option>" + strCategories + "</select></p>"
-                        + "<p>Catégorie maximum : <select id='group_maxCategory'><option value=''>Aucune</option>" + strCategories + "</select></p>";
+      strCategories = "<br/><p>Minimum category: <select id='group_minCategory'><option value=''>None</option>" + strCategories + "</select></p>"
+                        + "<p>Maximum category: <select id='group_maxCategory'><option value=''>None</option>" + strCategories + "</select></p>";
    }
    var strLanguages = "";
    var allLanguages = ["blockly", "scratch", "python"]; // TODO: do not hardcode values
@@ -1726,7 +1726,7 @@ function groupFormShowContestDetails(contestID) {
       }
    }
    if (strLanguages != "") {
-      strLanguages = "<br/><p>Langage de programmation : <select id='group_language'><option value=''>Libre</option>" + strLanguages + "</select></p>";
+      strLanguages = "<br/><p>Programming language: <select id='group_language'><option value=''>Any</option>" + strLanguages + "</select></p>";
    }
    $("#contestParams").html(strCategories + strLanguages);
 }
@@ -2895,7 +2895,7 @@ Number.prototype.pad = function(size){
 
 function getDateFromSQLFormat(string) {
   var d = new Date(Date.parse(string));
-    return d.getDate().pad() + "/" + (d.getMonth() + 1).pad() + "/" + d.getFullYear() + " à " + d.getHours().pad() + "h" + d.getMinutes().pad(); 
+    return d.getDate().pad() + "/" + (d.getMonth() + 1).pad() + "/" + d.getFullYear() + " at " + d.getHours().pad() + "h" + d.getMinutes().pad();
 }
 
 function printAlgoreaCodes() {
