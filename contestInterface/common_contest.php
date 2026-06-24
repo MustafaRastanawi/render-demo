@@ -48,6 +48,33 @@ function escapeHttpValue($value) {
    return '#' . base64_encode($value);
 }
 
+function canonicalContestFolder($folder) {
+   $folder = trim((string)$folder);
+   if ($folder === '' || !preg_match('/^[0-9A-Za-z_.-]+$/', $folder)) {
+      return $folder;
+   }
+
+   $contestRoot = __DIR__ . '/contests';
+   $folderPath = $contestRoot . '/' . $folder;
+   if (is_link($folderPath)) {
+      $resolvedPath = realpath($folderPath);
+      $resolvedRoot = realpath($contestRoot);
+      if ($resolvedPath !== false && $resolvedRoot !== false && strpos($resolvedPath, $resolvedRoot . DIRECTORY_SEPARATOR) === 0) {
+         return basename($resolvedPath);
+      }
+   }
+   if (is_dir($folderPath)) {
+      return $folder;
+   }
+
+   $matches = glob($contestRoot . '/' . $folder . '.*', GLOB_ONLYDIR);
+   if (count($matches) === 1) {
+      return basename($matches[0]);
+   }
+
+   return $folder;
+}
+
 function createTeamFromUserCode($db, $password) {
    // Use a custom function to fetch code from algorea_registration or anywhere else. You can
    // create it in config_local.php.
@@ -66,7 +93,7 @@ function createTeamFromUserCode($db, $password) {
 function updateSessionWithContestInfos($row) {
    $_SESSION["contestID"] = $row->contestID;
    $_SESSION["contestName"] = $row->contestName;
-   $_SESSION["contestFolder"] = $row->folder;
+   $_SESSION["contestFolder"] = canonicalContestFolder($row->folder);
    $_SESSION["contestOpen"] = $row->open;
    $_SESSION["contestShowSolutions"] = intval($row->showSolutions);
    $_SESSION["contestVisibility"] = $row->visibility;

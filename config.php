@@ -193,7 +193,7 @@ $config->certificates->hideType = false;
 $config->grades = [-1,4,5,6,16,7,17,8,18,9,19,10,13,11,14,12,15,20,-4];
 
 $config->timezone = ini_get('date.timezone');
-$config->defaultLanguage = 'fr';
+$config->defaultLanguage = 'en';
 $config->contestPresentationURL = '';
 $config->contestOfficialURL = '';
 $config->contestBackupURL = '';

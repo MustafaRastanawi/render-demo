@@ -82,6 +82,8 @@ normalize_demo_contest_assets() {
   fi
 
   echo "Normalizing Render demo contest assets..."
+  ln -sfn "$(basename "$demo_contest_dir")" "contestInterface/contests/2015_castor_ajakjtxnasj"
+
   find "$demo_contest_dir" -type f \( -name "*.html" -o -name "*.js" \) -print0 |
     xargs -0 -r sed -i -E \
       -e 's#https://bebras-render-demo\.onrender\.com/contestInterface/#/contestInterface/#g' \
@@ -290,6 +292,7 @@ SET @demo_group_password = 'zfvaxswk';
 
 UPDATE `contest`
 SET `folder` = @demo_contest_folder,
+    `name` = 'Training 2015, all levels',
     `open` = 'Open',
     `visibility` = 'Visible',
     `newInterface` = 1,
@@ -354,7 +357,7 @@ SELECT
   12,
   '',
   1201,
-  'Castor 2015 : tous les niveaux',
+  'Castor 2015: all levels',
   100000,
   0,
   0,
@@ -380,7 +383,7 @@ UPDATE `group`
 SET `code` = @demo_group_code,
     `password` = @demo_group_password,
     `contestID` = @demo_contest_id,
-    `name` = 'Castor 2015 : tous les niveaux',
+    `name` = 'Castor 2015: all levels',
     `nbStudents` = 100000,
     `expectedStartTime` = NOW(),
     `startTime` = NOW(),

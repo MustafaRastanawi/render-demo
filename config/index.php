@@ -48,6 +48,8 @@ $config->db->mysql->user = 'bebras';
 $config->db->mysql->password = 'bebras';
 $config->db->mysql->logged = false;
 
+$config->defaultLanguage = 'en';
+
 $config->teacherInterface->sCoordinatorFolder = $teacherBaseUrl;
 $config->teacherInterface->sAssetsStaticPath = $contestBaseUrl;
 $config->teacherInterface->sAbsoluteStaticPath = $contestBaseUrl;

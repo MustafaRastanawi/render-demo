@@ -7,6 +7,17 @@ function exitWithLogErrorJson($payload) {
    exit;
 }
 
+function limitLogField($value, $maxLength) {
+   if ($value === null) {
+      return null;
+   }
+   $value = (string)$value;
+   if (strlen($value) <= $maxLength) {
+      return $value;
+   }
+   return substr($value, 0, $maxLength);
+}
+
 if (!isset($_POST['errormsg'])) {
 	exitWithLogErrorJson(['success' => false, 'error' => 'missing errormsg argument']);
 }
@@ -18,12 +29,12 @@ try {
    initSession();
 
    $teamID = isset($_SESSION["teamID"]) && $_SESSION["teamID"] ? $_SESSION["teamID"] : (isset($_POST["teamID"]) && $_POST["teamID"] ? $_POST["teamID"] : null);
-   $questionKey = isset($_POST["questionKey"]) ? $_POST["questionKey"] : null;
-   $errormsg = $_POST['errormsg'];
+   $questionKey = limitLogField(isset($_POST["questionKey"]) ? $_POST["questionKey"] : null, 50);
+   $errormsg = limitLogField($_POST['errormsg'], 255);
 
    $parser = \UAParser\Parser::create();
    $userAgent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
-   $browserStr = $parser->parse($userAgent)->toString();
+   $browserStr = limitLogField($parser->parse($userAgent)->toString(), 100);
 
    $stmt = $db->prepare('insert into error_log (date, teamID, message, browser, questionKey) values (UTC_TIMESTAMP(), :teamID, :errormsg, :browserStr, :questionKey);');
    $stmt->execute(['teamID' => $teamID, 'errormsg' => $errormsg, 'browserStr' => $browserStr, 'questionKey' => $questionKey]);

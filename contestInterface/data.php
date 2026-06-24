@@ -86,7 +86,7 @@ function handleCreateTeam($db) {
          $stmt = $db->prepare("SELECT `folder` FROM contest WHERE ID = ?");
          $stmt->execute(array($_SESSION["contestID"]));
          $row = $stmt->fetchObject();
-         $_SESSION["contestFolder"] = $row->folder;
+         $_SESSION["contestFolder"] = canonicalContestFolder($row->folder);
          $groupData = getGroupForSubContest($db, $_SESSION["groupID"], $_SESSION["contestID"]);
          $_SESSION["groupID"] = $groupData["ID"];
       }
@@ -310,6 +310,7 @@ function handleLoadSession() {
       exitWithJson(['success' => true, "SID" => $sid]);
    }
    // Otherwise, data from the session is also returned.
+   $_SESSION["contestFolder"] = canonicalContestFolder($_SESSION["contestFolder"]);
    addBackendHint("ClientIP.loadSession:found");
    addBackendHint(sprintf("SessionId(%s):loadSession", escapeHttpValue($sid)));
    $message = "Voulez-vous reprendre l'épreuve commencée ?";
@@ -704,6 +705,7 @@ function handleCheckGroupPassword($db, $password, $getTeams, $extraMessage = "",
          }
       }
       if (!$discardCategory) {
+         $rowChild->folder = canonicalContestFolder($rowChild->folder);
          $childrenContests[] = $rowChild;
       }
    };
