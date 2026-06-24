@@ -16,7 +16,7 @@
   window.contestsRoot = <?= json_encode(upgrade_url($config->teacherInterface->sAbsoluteStaticPath.'/contests')) ?>;
   window.sAbsoluteStaticPath = <?= json_encode(upgrade_url($config->teacherInterface->sAbsoluteStaticPath.'/')) ?>;
   window.sAssetsStaticPath = <?= json_encode(upgrade_url($config->teacherInterface->sAssetsStaticPath.'/')) ?>;
-  window.timestamp = <?= $config->timestamp ?>;
+  window.timestamp = <?= json_encode($config->timestamp) ?>;
   window.config = <?= json_encode([
     "defaultLanguage" => $config->defaultLanguage,
     "httpsTestUrl" => $config->contestInterface->httpsTestUrl,
@@ -37,8 +37,8 @@
 
   window.config.downgradeToHTTP = window.config.downgradeToHTTP && (window.location.protocol != 'https:');
 
-  window.srlModuleUrl = <?=$config->contestInterface->srlModuleUrl ? "'" . $config->contestInterface->srlModuleUrl . "'" : 'null' ?>;
-  window.jschannelUrl = '<?=static_asset('/jschannel.js') ?>';
+  window.srlModuleUrl = <?= json_encode($config->contestInterface->srlModuleUrl ?: null) ?>;
+  window.jschannelUrl = <?= json_encode(static_asset('/jschannel.js')) ?>;
 
   function displayBody() {
     // Display the page
@@ -143,8 +143,8 @@ if(!$browserVerified) {
 }
 
 try {
-  $browserIsMobile = $browser->isType('mobile', 'tablet', 'ereader');
-} catch(Exception $e) {
+  $browserIsMobile = $browser ? $browser->isType('mobile', 'tablet', 'ereader') : false;
+} catch(Throwable $e) {
   $browserIsMobile = false;
 }
 ?>
